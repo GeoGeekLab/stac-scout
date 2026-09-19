@@ -10,7 +10,7 @@ def odc_stac_recipe(manifest: Manifest) -> str:
     resolution = repr(request.max_spatial_resolution_m)
     interval = f"{request.datetime.start.isoformat()}/{request.datetime.end.isoformat()}"
 
-    return f'''from odc.geo import Geometry
+    return f"""from odc.geo import Geometry
 import odc.stac
 from pystac_client import Client
 
@@ -30,4 +30,4 @@ ds = odc.stac.load(
     geopolygon=aoi,
     resolution={resolution},
 )
-'''
+"""
