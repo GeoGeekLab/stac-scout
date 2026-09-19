@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Annotated, Any
 
 import typer
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 from rich.console import Console
 
 from stac_scout import __version__
@@ -146,7 +146,10 @@ def replay(
 def schema(
     target: Annotated[str, typer.Argument(help="Schema name: request or manifest")],
 ) -> None:
-    models = {"request": ScoutRequest, "manifest": Manifest}
+    models: dict[str, type[BaseModel]] = {
+        "request": ScoutRequest,
+        "manifest": Manifest,
+    }
     model = models.get(target)
     if model is None:
         console.print(f"[red]unknown schema[/red]: {target}", highlight=False)

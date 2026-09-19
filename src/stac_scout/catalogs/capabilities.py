@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import Any
+from typing import Any, cast
 
 import httpx
 
@@ -15,8 +15,11 @@ def _supports(classes: Iterable[str], fragment: str) -> bool:
 
 def _conformance_href(root: dict[str, Any]) -> str | None:
     for link in root.get("links", []):
-        if link.get("rel") == "conformance" and isinstance(link.get("href"), str):
-            return link["href"]
+        if not isinstance(link, dict) or link.get("rel") != "conformance":
+            continue
+        href = link.get("href")
+        if isinstance(href, str):
+            return href
     return None
 
 
@@ -31,17 +34,20 @@ def inspect_catalog(
     try:
         root_response = http.get(url)
         root_response.raise_for_status()
-        root = root_response.json()
+        root = cast(dict[str, Any], root_response.json())
 
         classes = set(root.get("conformsTo", []))
         conformance_url = _conformance_href(root)
         if conformance_url:
             response = http.get(conformance_url)
             response.raise_for_status()
-            classes.update(response.json().get("conformsTo", []))
+            document = cast(dict[str, Any], response.json())
+            classes.update(document.get("conformsTo", []))
 
         links = root.get("links", [])
-        has_search_link = any(link.get("rel") == "search" for link in links)
+        has_search_link = any(
+            isinstance(link, dict) and link.get("rel") == "search" for link in links
+        )
 
         ordered = tuple(sorted(str(value) for value in classes))
         return CatalogCapabilities(

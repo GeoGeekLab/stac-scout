@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable
-from typing import Any
+from typing import Any, cast
 
 from stac_scout.models import CatalogCapabilities, ScoutRequest
 
@@ -36,11 +36,11 @@ class GenericStacAdapter:
     def list_collections(self) -> Iterable[dict[str, Any]]:
         client = self._client()
         for collection in client.get_collections():
-            yield collection.to_dict()
+            yield cast(dict[str, Any], collection.to_dict())
 
     def get_collection(self, collection_id: str) -> dict[str, Any]:
         collection = self._client().get_collection(collection_id)
-        return collection.to_dict()
+        return cast(dict[str, Any], collection.to_dict())
 
     def search_items(
         self,
@@ -61,4 +61,4 @@ class GenericStacAdapter:
             datetime=interval,
             max_items=max_items,
         )
-        return [item.to_dict() for item in search.items()]
+        return [cast(dict[str, Any], item.to_dict()) for item in search.items()]
