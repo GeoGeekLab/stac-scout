@@ -17,11 +17,15 @@ def estimate_asset_bytes(
     probe: AvailabilityProbe | None = None,
     windowed: bool = True,
 ) -> int | None:
-    fractions = {
-        item.item_id: item.item_fraction_read
-        for item in probe.items
-        if item.item_fraction_read is not None
-    } if probe is not None else {}
+    fractions = (
+        {
+            item.item_id: item.item_fraction_read
+            for item in probe.items
+            if item.item_fraction_read is not None
+        }
+        if probe is not None
+        else {}
+    )
 
     total = 0.0
     observed = False
