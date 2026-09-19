@@ -142,6 +142,8 @@ python -m pip install -e ".[planetary-computer]"
 
 ## Geo Task Intelligence
 
+![Geo Task Intelligence workflow](docs/assets/geo-task-intelligence.svg)
+
 The user often knows the problem, not the bands.
 
 ```text
