@@ -19,9 +19,7 @@ def test_advisor_derives_required_data_needs(scout_request: ScoutRequest) -> Non
     assert advice.enriched_request.required_measurements == ("nir", "swir22")
     assert advice.follow_up_requirements == ("comparison_windows",)
     required = [
-        item
-        for item in advice.derivations
-        if item.strength is RequirementStrength.REQUIRED
+        item for item in advice.derivations if item.strength is RequirementStrength.REQUIRED
     ]
     assert {item.field for item in required} == {"data_type", "required_measurements"}
 
@@ -60,9 +58,7 @@ def test_advisor_preserves_explicit_task_preferences(scout_request: ScoutRequest
 def test_advisor_keeps_user_measurements_and_adds_missing_requirements(
     scout_request: ScoutRequest,
 ) -> None:
-    request = scout_request.model_copy(
-        update={"required_measurements": ("thermal", "nir")}
-    )
+    request = scout_request.model_copy(update={"required_measurements": ("thermal", "nir")})
 
     advice = TaskAdvisor().advise(request, GeoTask.WILDFIRE_IMPACT)
 
