@@ -1,0 +1,20 @@
+{
+  "id": "optical-surface-reflectance-001",
+  "request": {
+    "task": "vegetation analysis",
+    "place": "Singapore",
+    "datetime": {
+      "start": "2026-06-01T00:00:00Z",
+      "end": "2026-06-30T23:59:59Z"
+    },
+    "data_type": "optical",
+    "required_measurements": ["red", "nir"],
+    "max_spatial_resolution_m": 10.0,
+    "access": "open"
+  },
+  "expectations": {
+    "must_verify_items": true,
+    "must_resolve_measurements": ["red", "nir"],
+    "forbid_unverified_recommendation": true
+  }
+}

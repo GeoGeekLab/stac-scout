@@ -1,0 +1,21 @@
+providers:
+  earth-search:
+    name: Element 84 Earth Search
+    url: https://earth-search.aws.element84.com/v1
+    adapter: generic
+    access: open
+    asset_signing: none
+
+  planetary-computer:
+    name: Microsoft Planetary Computer
+    url: https://planetarycomputer.microsoft.com/api/stac/v1
+    adapter: planetary_computer
+    access: open
+    asset_signing: planetary_computer
+
+  nasa-cmr:
+    name: NASA CMR-STAC
+    url: https://cmr.earthdata.nasa.gov/stac
+    adapter: nasa_cmr
+    access: open
+    asset_signing: provider_dependent
