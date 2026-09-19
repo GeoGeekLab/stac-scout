@@ -36,9 +36,7 @@ def check_provider(
 
     elapsed = max(0.0, (clock() - started) * 1000)
     status = (
-        ProviderHealthStatus.HEALTHY
-        if capabilities.item_search
-        else ProviderHealthStatus.DEGRADED
+        ProviderHealthStatus.HEALTHY if capabilities.item_search else ProviderHealthStatus.DEGRADED
     )
     return ProviderHealth(
         provider_key=provider.key,
