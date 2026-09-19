@@ -1,0 +1,129 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="850" viewBox="0 0 1600 850" role="img" aria-labelledby="title desc">
+  <title id="title">Geo Task Intelligence</title>
+  <desc id="desc">A deterministic workflow from user goal to task rules, derived requirements, catalog discovery, live verification, and replayable decision output.</desc>
+  <rect width="1600" height="850" fill="#ffffff"/>
+  <style>
+    .title{font:700 58px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;fill:#111827}
+    .subtitle{font:400 24px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;fill:#64748b}
+    .h{font:700 24px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;fill:#111827}
+    .b{font:400 18px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;fill:#475569}
+    .mono{font:500 17px ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;fill:#475569}
+    .small{font:400 16px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;fill:#64748b}
+    .card{fill:#fbfdff;stroke:#cbd5e1;stroke-width:2}
+    .row{fill:#f8fafc;stroke:#e2e8f0;stroke-width:1.5}
+    .arrow{stroke:#64748b;stroke-width:3;fill:none;stroke-linecap:round;stroke-linejoin:round}
+    .dash{stroke:#94a3b8;stroke-width:2;stroke-dasharray:7 7;fill:none}
+    .blue{fill:#2563eb}.green{fill:#16a34a}.iconbg{fill:#eaf2ff}.greenbg{fill:#eaf8ef}
+  </style>
+
+  <text x="800" y="75" text-anchor="middle" class="title">Geo Task Intelligence</text>
+  <text x="800" y="118" text-anchor="middle" class="subtitle">Turn a geospatial problem into explicit, testable data requirements.</text>
+
+  <rect x="40" y="190" rx="14" ry="14" width="180" height="260" class="card"/>
+  <circle cx="82" cy="230" r="24" class="iconbg"/>
+  <circle cx="82" cy="224" r="8" fill="none" stroke="#2563eb" stroke-width="3"/>
+  <path d="M68 246c4-11 24-11 28 0" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round"/>
+  <text x="62" y="280" class="h">User Goal</text>
+  <text x="62" y="323" class="b">wildfire impact</text>
+  <text x="62" y="356" class="b">flood extent</text>
+  <text x="62" y="389" class="b">snow cover</text>
+
+  <path d="M220 320H255" class="arrow"/><path d="M246 310l11 10-11 10" class="arrow"/>
+
+  <rect x="265" y="190" rx="14" ry="14" width="210" height="260" class="card"/>
+  <circle cx="308" cy="230" r="24" fill="#eef2f7"/>
+  <rect x="299" y="216" width="18" height="26" rx="2" fill="none" stroke="#111827" stroke-width="3"/>
+  <path d="M303 223h10M303 229h10M303 235h7" stroke="#111827" stroke-width="2"/>
+  <text x="286" y="280" class="h">Task Type</text>
+  <text x="286" y="323" class="mono">wildfire_impact</text>
+  <text x="286" y="356" class="mono">flood_extent</text>
+  <text x="286" y="389" class="mono">snow_cover</text>
+
+  <path d="M475 320H510" class="arrow"/><path d="M501 310l11 10-11 10" class="arrow"/>
+
+  <rect x="520" y="160" rx="14" ry="14" width="315" height="350" class="card"/>
+  <circle cx="565" cy="205" r="24" class="iconbg"/>
+  <circle cx="565" cy="205" r="10" fill="none" stroke="#2563eb" stroke-width="4"/>
+  <path d="M565 188v7M565 215v7M548 205h7M575 205h7M553 193l5 5M572 212l5 5M577 193l-5 5M558 212l-5 5" stroke="#2563eb" stroke-width="3" stroke-linecap="round"/>
+  <text x="600" y="214" class="h">Task Rules</text>
+
+  <rect x="545" y="245" rx="10" width="265" height="40" class="row"/>
+  <circle cx="565" cy="265" r="6" class="blue"/><text x="585" y="271" class="b">required measurements</text>
+  <rect x="545" y="294" rx="10" width="265" height="40" class="row"/>
+  <circle cx="565" cy="314" r="6" fill="#3182ce"/><text x="585" y="320" class="b">preferred measurements</text>
+  <rect x="545" y="343" rx="10" width="265" height="40" class="row"/>
+  <circle cx="565" cy="363" r="6" fill="#3182ce"/><text x="585" y="369" class="b">temporal strategy</text>
+  <rect x="545" y="392" rx="10" width="265" height="40" class="row"/>
+  <circle cx="565" cy="412" r="6" fill="#3182ce"/><text x="585" y="418" class="b">processing preferences</text>
+  <rect x="545" y="441" rx="10" width="265" height="40" class="row"/>
+  <circle cx="565" cy="461" r="6" fill="#3182ce"/><text x="585" y="467" class="b">mask preferences</text>
+  <text x="545" y="500" class="small">versioned • inspectable • deterministic</text>
+
+  <path d="M835 320H870" class="arrow"/><path d="M861 310l11 10-11 10" class="arrow"/>
+
+  <rect x="880" y="190" rx="14" ry="14" width="315" height="300" class="card"/>
+  <circle cx="925" cy="230" r="24" class="greenbg"/>
+  <path d="M917 216h12l8 8v20h-20z" fill="none" stroke="#16a34a" stroke-width="3"/><path d="M929 216v10h8" fill="none" stroke="#16a34a" stroke-width="3"/>
+  <text x="960" y="239" class="h">Derived Requirements</text>
+  <rect x="905" y="272" rx="10" width="265" height="40" class="row"/>
+  <circle cx="925" cy="292" r="6" class="green"/><text x="945" y="298" class="b">data type</text>
+  <rect x="905" y="321" rx="10" width="265" height="40" class="row"/>
+  <circle cx="925" cy="341" r="6" class="green"/><text x="945" y="347" class="b">bands / measurements</text>
+  <rect x="905" y="370" rx="10" width="265" height="40" class="row"/>
+  <circle cx="925" cy="390" r="6" class="green"/><text x="945" y="396" class="b">before-after or single-window</text>
+  <rect x="905" y="419" rx="10" width="265" height="40" class="row"/>
+  <circle cx="925" cy="439" r="6" class="green"/><text x="945" y="445" class="b">follow-up requirements</text>
+
+  <path d="M1195 320H1230" class="arrow"/><path d="M1221 310l11 10-11 10" class="arrow"/>
+
+  <rect x="1240" y="245" rx="14" ry="14" width="150" height="150" class="card"/>
+  <circle cx="1282" cy="282" r="24" class="iconbg"/>
+  <path d="M1270 286l22-13-9 25-3-9z" fill="none" stroke="#2563eb" stroke-width="3" stroke-linejoin="round"/>
+  <text x="1270" y="335" class="h">Scout</text>
+  <text x="1270" y="366" class="h">Request</text>
+
+  <path d="M1390 290h35v-78h35" class="arrow"/><path d="M1451 202l11 10-11 10" class="arrow"/>
+  <path d="M1390 350h35v88h35" class="arrow"/><path d="M1451 428l11 10-11 10" class="arrow"/>
+
+  <rect x="1465" y="155" rx="14" width="120" height="125" class="card"/>
+  <circle cx="1497" cy="190" r="21" class="greenbg"/>
+  <ellipse cx="1497" cy="184" rx="9" ry="4" fill="none" stroke="#16a34a" stroke-width="2.5"/>
+  <path d="M1488 184v14c0 5 18 5 18 0v-14M1488 191c0 5 18 5 18 0" fill="none" stroke="#16a34a" stroke-width="2.5"/>
+  <text x="1525" y="192" class="h" font-size="18">Catalog</text>
+  <text x="1525" y="216" class="h" font-size="18">Discovery</text>
+  <text x="1484" y="252" class="small">which datasets fit?</text>
+
+  <rect x="1465" y="375" rx="14" width="120" height="125" class="card"/>
+  <circle cx="1497" cy="410" r="21" class="iconbg"/>
+  <circle cx="1494" cy="407" r="8" fill="none" stroke="#2563eb" stroke-width="3"/><path d="M1500 413l8 8" stroke="#2563eb" stroke-width="3" stroke-linecap="round"/>
+  <text x="1525" y="412" class="h" font-size="18">Live</text>
+  <text x="1525" y="436" class="h" font-size="18">Verification</text>
+  <text x="1478" y="472" class="small">do matching items exist?</text>
+
+  <path d="M1525 500v50" class="arrow"/><path d="M1515 541l10 11 10-11" class="arrow"/>
+
+  <rect x="1320" y="565" rx="14" width="265" height="180" class="card"/>
+  <circle cx="1360" cy="605" r="22" class="greenbg"/>
+  <path d="M1352 591h12l7 7v18h-19zM1364 591v9h7" fill="none" stroke="#16a34a" stroke-width="2.5"/>
+  <path d="M1357 610l5 5 10-11" fill="none" stroke="#16a34a" stroke-width="2.5"/>
+  <text x="1400" y="613" class="h">Decision Output</text>
+  <rect x="1345" y="635" rx="9" width="215" height="30" class="row"/><circle cx="1362" cy="650" r="5" class="green"/><text x="1378" y="656" class="b">asset plan</text>
+  <rect x="1345" y="674" rx="9" width="215" height="30" class="row"/><circle cx="1362" cy="689" r="5" class="green"/><text x="1378" y="695" class="b">manifest</text>
+  <rect x="1345" y="713" rx="9" width="215" height="30" class="row"/><circle cx="1362" cy="728" r="5" class="green"/><text x="1378" y="734" class="b">replayable evidence</text>
+
+  <rect x="530" y="585" rx="12" width="290" height="90" class="card"/>
+  <text x="555" y="620" class="h" font-size="19">ⓘ</text>
+  <text x="590" y="620" class="b">Rules do not invent</text>
+  <text x="590" y="648" class="b">dates or coordinates.</text>
+  <path d="M675 585V520" class="dash"/>
+
+  <rect x="900" y="585" rx="12" width="290" height="90" class="card"/>
+  <text x="925" y="620" class="h" font-size="19">ⓘ</text>
+  <text x="960" y="620" class="b">Explicit user constraints</text>
+  <text x="960" y="648" class="b">are preserved.</text>
+  <path d="M1045 585V500" class="dash"/>
+
+  <line x1="40" y1="790" x2="1560" y2="790" stroke="#cbd5e1" stroke-width="2"/>
+  <rect x="470" y="804" rx="10" width="660" height="34" fill="#f8fafc" stroke="#e2e8f0"/>
+  <text x="800" y="827" text-anchor="middle" class="mono">intent → task semantics → data requirements → discovery → verification</text>
+</svg>
