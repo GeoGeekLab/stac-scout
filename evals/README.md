@@ -1,14 +1,20 @@
 # Evaluations
 
-The evaluation corpus tests decision contracts rather than model wording.
+The offline evaluation corpus tests decision contracts rather than model wording.
 
-- `cases/` covers request invariants such as required measurements and verification requirements.
-- `federation_cases/` covers cross-catalog identity and deduplication behavior with synthetic metadata.
+- `cases/` covers request invariants.
+- `federation_cases/` covers cross-catalog identity and deduplication behavior.
 
-Run the offline validator with:
+Run deterministic evaluations with:
 
 ```bash
 python evals/runner.py
 ```
 
-Live catalog evaluations stay separate because remote availability changes over time.
+Live provider observations are intentionally separate because remote state changes over time:
+
+```bash
+python evals/live.py
+```
+
+The GitHub workflow **Live provider checks** is manual and does not gate ordinary CI.

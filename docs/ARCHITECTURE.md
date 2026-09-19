@@ -1,111 +1,82 @@
 # Architecture
 
-STAC Scout separates language-facing intent from data-facing verification. The core package accepts a structured `ScoutRequest`; it does not guess missing geographic facts.
+STAC Scout keeps language interpretation, operational health, and geospatial verification separate.
 
-## Boundaries
+## Intent boundary
 
-### Provider registry
+`stac_scout.reasoning` defines a model-neutral `StructuredExtractor` protocol. Scout supplies strict extraction instructions and the `IntentDraft` JSON schema; an application supplies the model or service.
 
-`stac_scout.registry` owns the built-in provider inventory. The canonical registry is packaged at `stac_scout/data/providers.toml` so provider metadata is available from an installed wheel as well as a source checkout.
+`IntentDraft` is intentionally less strict than `ScoutRequest`. Missing dates, locations, or ambiguous requirements stay in `unresolved`. `IntentDraft.to_request()` is the gate into the deterministic core and refuses unresolved input.
 
-A `ProviderSpec` records the endpoint, adapter type, access mode, asset-signing strategy, and whether the provider is enabled for default federation. Provider configuration is declarative; network behavior belongs in adapters.
+The intent layer does not geocode names, invent dates, choose datasets, or verify availability.
 
-### Catalog layer
+## Provider health
 
-`stac_scout.catalogs` owns remote STAC interaction. `GenericStacAdapter` delegates ordinary STAC operations to `pystac-client`; capability inspection reads the root and conformance documents directly so optional API features are explicit.
+`stac_scout.health` observes endpoint reachability, response latency, STAC version, and Item Search support. Health is operational metadata only. It is never an input to scientific dataset scoring.
 
-Provider-specific behavior belongs behind the `CatalogAdapter` protocol and adapter factory. The Microsoft Planetary Computer adapter records the required asset-signing strategy, while metadata discovery remains normal STAC access. Generated Planetary Computer recipes use the official `planetary_computer.sign_inplace` modifier rather than reproducing SAS logic.
+External health checks are kept out of normal CI. The manual live workflow runs health and federation smoke checks against real providers.
 
-The adapter protocol deliberately does not require provider metadata. Third-party adapters written against the earlier single-catalog interface remain valid; `ScoutEngine` treats provider identity and signing as optional adapter capabilities.
+## Provider registry and adapters
 
-### Normalization layer
+`ProviderRegistry` loads packaged provider metadata from `stac_scout/data/providers.toml`. A provider records endpoint, adapter type, access mode, signing strategy, and whether it participates in default federation.
 
-`stac_scout.normalize` converts provider metadata into stable internal models. The normalizer recognizes STAC 1.1 `bands` as well as the older `eo:bands` and `raster:bands` forms.
+Network quirks belong behind `CatalogAdapter`. The Planetary Computer adapter records its signing requirement while generated recipes use the official `planetary_computer.sign_inplace` modifier.
 
-Normalization also extracts dataset identity evidence such as `sci:doi`, platforms, constellations, and instruments. Missing metadata remains missing rather than being inferred from a familiar collection or asset name.
+The base adapter protocol deliberately remains provider-neutral so third-party adapters are not forced to implement registry metadata.
 
-### Constraint layer
+## Normalization and constraints
+
+Provider metadata is converted to stable internal models. Normalization recognizes STAC 1.1 `bands` and legacy `eo:bands` / `raster:bands` forms.
 
 Constraints use three states:
 
-- `pass`: the declared metadata satisfies the requirement
-- `fail`: the declared metadata contradicts the requirement
-- `unknown`: the catalog does not provide enough information
+- `pass`: metadata satisfies the requirement
+- `fail`: metadata contradicts the requirement
+- `unknown`: metadata is insufficient
 
-`unknown` is intentionally distinct from `fail`.
+Unknown is intentionally distinct from failure.
 
-### Verification layer
+## Verification
 
-Availability is item-level evidence. A collection whose temporal and spatial extents overlap a request is still unverified until an item search is performed.
+Collection extents are not proof of availability. Item search is required before Scout reports data as available.
 
-AOI coverage is measured using WGS84 ellipsoidal area. The verifier records both:
+AOI coverage uses WGS84 ellipsoidal area and records both AOI coverage and the fraction of an item intersected by the AOI. The latter supports first-order windowed read estimates.
 
-- fraction of the AOI covered by an item
-- fraction of the item footprint intersected by the AOI
+## Federation and identity
 
-The second value is used as a first-order estimate for windowed asset reads.
+`FederatedScout` composes independent single-catalog engines. One provider failing does not abort the whole discovery operation; the failure is returned explicitly.
 
-### Federation layer
+Cross-catalog identity is conservative:
 
-`FederatedScout` composes independent `ScoutEngine` instances. Providers are queried separately, and a failure from one catalog is returned as `ProviderFailure` instead of aborting the entire discovery operation.
+1. `sci:doi` → `exact`
+2. collection ID plus platform/constellation/instrument evidence → `probable`
+3. otherwise → catalog-local identity
 
-Cross-catalog identity is deliberately conservative:
+Only exact groups are marked safe to collapse. Probable groups remain visible.
 
-1. `sci:doi` produces an `exact` identity.
-2. Matching collection ID plus declared platform, constellation, or instrument metadata produces a `probable` identity.
-3. Otherwise identity remains `local` to the catalog and collection.
+## Planning and provenance
 
-Both exact and probable matches may be shown as duplicate groups, but only exact groups are marked safe to collapse. This prevents federation from silently treating similar-looking collections as the same scientific product.
+Planning resolves requested measurements against declared asset and band metadata. It does not invent aliases.
 
-### Planning layer
+When `file:size` exists, the planner estimates transfer volume using the item intersection fraction. Continuous measurements default to bilinear resampling; masks and classifications default to nearest-neighbor.
 
-Planning resolves requested measurements against declared asset keys and band metadata. It does not invent aliases when metadata is absent.
-
-When STAC File metadata provides `file:size`, the planner estimates bytes required for the AOI by applying the item intersection fraction. This is an estimate, not a promise about HTTP range behavior or compression layout.
-
-Resampling defaults are semantic:
-
-- masks, QA, classifications, and land cover use nearest-neighbor
-- continuous measurements use bilinear interpolation
-
-Provider- or product-specific rules may override these defaults later.
-
-### Provenance layer
-
-A manifest records the request, provider identity when known, catalog, collection, item IDs, selected assets, signing strategy, query, warnings, and Scout version. Replaying a manifest performs a new live item search and reports item-set drift.
-
-A manifest is evidence of how a decision was made; it is not a frozen copy of the remote data.
+A manifest records request, provider, catalog, collection, item IDs, selected assets, signing strategy, query, warnings, and Scout version. Replay performs a fresh search and reports item-set drift.
 
 ## Dependency direction
 
 ```text
-models      registry
-  ↑            │
-normalize      └── catalog factory
-  ↑                  │
-constraints      CatalogAdapter
-  ↑                  │
-verify          ScoutEngine
-  ↑               │     │
-planning          │     └── FederatedScout
-  ↑               │
-provenance ───────┘
-       ↑
-      CLI
+reasoning ──> IntentDraft ──> ScoutRequest
+                              │
+registry ──> adapters ────────┤
+health     (separate)         │
+                              v
+                         ScoutEngine
+                         /        \
+                  federation    planning
+                                   │
+                              provenance
 ```
-
-Remote access is isolated in `catalogs`. Geometry, normalization, identity, constraints, and planning logic remain independently testable.
 
 ## Non-goals
 
-The core does not provide:
-
-- a STAC API implementation
-- a raster processing engine
-- a geocoder
-- a general-purpose GIS agent
-- an embedding database
-- a multi-agent orchestration framework
-- heuristic auto-merging of ambiguous cross-provider datasets
-
-Those capabilities can be composed around Scout without becoming core dependencies.
+The core does not provide a STAC server, raster processing engine, geocoder, general GIS agent, embedding database, multi-agent framework, or heuristic auto-merging of ambiguous datasets.

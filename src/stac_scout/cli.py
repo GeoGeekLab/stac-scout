@@ -11,9 +11,11 @@ from rich.console import Console
 from stac_scout import __version__
 from stac_scout.catalogs import CatalogAdapter, GenericStacAdapter, build_adapter, inspect_catalog
 from stac_scout.federation import FederatedScout
-from stac_scout.models import Manifest, ProviderSpec, ScoutRequest
+from stac_scout.health import check_providers
+from stac_scout.models import IntentDraft, Manifest, ProviderSpec, ScoutRequest
 from stac_scout.planning import odc_stac_recipe
 from stac_scout.provenance import read_manifest, replay_manifest, write_manifest
+from stac_scout.reasoning import intent_instructions
 from stac_scout.registry import ProviderRegistry, UnknownProviderError
 from stac_scout.scout import ScoutEngine
 
@@ -96,6 +98,48 @@ def providers(
             for provider in registry.all(include_disabled=include_disabled)
         ]
     )
+
+
+@app.command("intent-contract")
+def intent_contract() -> None:
+    _print_json(
+        {
+            "instructions": intent_instructions(),
+            "schema": IntentDraft.model_json_schema(),
+        }
+    )
+
+
+@app.command("resolve-intent")
+def resolve_intent(
+    path: Annotated[Path, typer.Argument(exists=True, dir_okay=False, readable=True)],
+) -> None:
+    try:
+        draft = IntentDraft.model_validate_json(path.read_text(encoding="utf-8"))
+        request = draft.to_request()
+    except (OSError, ValidationError, ValueError) as exc:
+        console.print(f"[red]unresolved intent[/red]: {exc}", highlight=False)
+        raise typer.Exit(code=2) from exc
+    _print_json(request)
+
+
+@app.command("health")
+def health(
+    provider: Annotated[list[str] | None, typer.Option("--provider")] = None,
+    include_disabled: Annotated[bool, typer.Option("--all")] = False,
+    timeout: Annotated[float, typer.Option(min=0.1, max=120.0)] = 10.0,
+) -> None:
+    registry = ProviderRegistry.builtin()
+    try:
+        selected = (
+            registry.select(provider)
+            if provider is not None
+            else registry.all(include_disabled=include_disabled)
+        )
+    except (UnknownProviderError, ValueError) as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    health = check_providers(selected, timeout=timeout)
+    _print_json([item.model_dump(mode="json") for item in health])
 
 
 @app.command("discover")
@@ -251,10 +295,11 @@ def replay(
 
 @app.command("schema")
 def schema(
-    target: Annotated[str, typer.Argument(help="Schema name: request or manifest")],
+    target: Annotated[str, typer.Argument(help="Schema name: request, intent, or manifest")],
 ) -> None:
     models: dict[str, type[BaseModel]] = {
         "request": ScoutRequest,
+        "intent": IntentDraft,
         "manifest": Manifest,
     }
     model = models.get(target)

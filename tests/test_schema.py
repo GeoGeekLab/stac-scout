@@ -19,3 +19,10 @@ def test_unknown_schema_fails() -> None:
 
     assert result.exit_code == 2
     assert "unknown schema" in result.stdout
+
+
+def test_intent_schema_command() -> None:
+    result = runner.invoke(app, ["schema", "intent"])
+
+    assert result.exit_code == 0
+    assert '"title": "IntentDraft"' in result.stdout

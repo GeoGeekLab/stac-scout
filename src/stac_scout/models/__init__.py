@@ -6,7 +6,9 @@ from .dataset import (
     ConstraintStatus,
     DatasetCard,
 )
+from .health import ProviderHealth, ProviderHealthStatus
 from .identity import DatasetIdentity, IdentityStrength
+from .intent import IntentDraft, UnresolvedIntentError
 from .probe import AvailabilityProbe, ItemEvidence
 from .provider import (
     AssetSigning,
@@ -41,12 +43,16 @@ __all__ = [
     "DecisionReport",
     "Evidence",
     "IdentityStrength",
+    "IntentDraft",
     "ItemEvidence",
     "Manifest",
     "ProviderAccess",
     "ProviderAdapter",
+    "ProviderHealth",
+    "ProviderHealthStatus",
     "ProviderSpec",
     "ScoutRequest",
     "TimeRange",
+    "UnresolvedIntentError",
     "VerificationStatus",
 ]

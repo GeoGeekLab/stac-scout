@@ -4,7 +4,7 @@ Evidence-backed dataset selection and verification for STAC catalogs.
 
 **Find it. Check it. Use it.**
 
-STAC Scout is a deterministic decision layer above STAC APIs. It helps answer a narrower and more useful question than "how do I query STAC?":
+STAC Scout is a deterministic decision layer above STAC APIs. It helps answer a more useful question than "how do I query STAC?":
 
 > Which dataset fits this request, does matching data actually exist, what assets are needed, and how can the decision be reproduced?
 
@@ -14,16 +14,15 @@ It does not replace `pystac-client`, `odc-stac`, or a STAC API.
 
 - inspects STAC API capabilities before using optional features
 - normalizes collection metadata into a stable dataset model
-- ranks collection candidates with transparent lexical scoring
 - evaluates hard constraints with `pass` / `fail` / `unknown` semantics
-- verifies item availability for an AOI and time range
-- measures AOI coverage with ellipsoidal area
-- resolves requested measurements to declared asset/band metadata
-- estimates windowed transfer volume when `file:size` is available
-- emits reproducible manifests and `odc-stac` recipes
-- replays manifests to detect item-set drift
-- federates discovery across multiple catalogs without hiding provider failures
-- groups cross-catalog duplicates conservatively using evidence-backed identity rules
+- verifies item availability and AOI coverage
+- resolves requested measurements to declared assets and bands
+- estimates windowed transfer volume when size metadata exists
+- emits replayable manifests and `odc-stac` recipes
+- federates discovery across multiple providers without hiding failures
+- groups cross-catalog duplicates conservatively
+- exposes a model-neutral natural-language intent contract
+- reports provider health without contaminating scientific ranking
 
 ## Design rules
 
@@ -31,10 +30,10 @@ It does not replace `pystac-client`, `odc-stac`, or a STAC API.
 - Collection metadata is candidate evidence, not proof of item availability.
 - `intersects` is not the same as AOI coverage.
 - Unknown metadata is not a failed constraint.
-- Dataset recommendations must carry evidence and caveats.
 - Probable duplicates remain visible; only strong identities are safe to collapse.
-- Provider-specific access belongs behind adapters and manifests.
-- Core verification stays deterministic; language models belong at the edges.
+- Provider health is operational evidence, not scientific ranking evidence.
+- Natural-language parsing may produce unresolved fields; it must not invent coordinates or dates.
+- Core verification remains deterministic; language models stay at the edge.
 
 ## Install
 
@@ -50,155 +49,109 @@ Planetary Computer access recipes use Microsoft's official signing SDK:
 python -m pip install -e ".[planetary-computer]"
 ```
 
-## Request model
+## Intent contract
 
-A request is explicit about the scientific and operational constraints:
-
-```json
-{
-  "task": "vegetation analysis",
-  "geometry": {
-    "type": "Polygon",
-    "coordinates": [[[103.8, 1.2], [104.0, 1.2], [104.0, 1.4], [103.8, 1.4], [103.8, 1.2]]]
-  },
-  "datetime": {
-    "start": "2026-06-01T00:00:00Z",
-    "end": "2026-06-30T23:59:59Z"
-  },
-  "data_type": "optical",
-  "required_measurements": ["red", "nir"],
-  "max_spatial_resolution_m": 10
-}
-```
-
-Validate it:
+STAC Scout does not embed a model SDK in the core package. Applications can give any structured-output model the extraction contract:
 
 ```bash
-stac-scout validate-request request.json
+stac-scout intent-contract
+stac-scout schema intent
+```
+
+A model returns an `IntentDraft`. Missing or ambiguous requirements belong in `unresolved`; Scout refuses to convert the draft into a `ScoutRequest` until they are resolved.
+
+```bash
+stac-scout resolve-intent intent.json
 ```
 
 ## Providers
 
-Built-in provider metadata lives in `src/stac_scout/data/providers.toml`.
+Built-in provider metadata is packaged in `src/stac_scout/data/providers.toml`.
 
 ```bash
 stac-scout providers
 stac-scout providers --all
+stac-scout health
+stac-scout health --provider earth-search
 ```
 
-The default enabled providers are:
+The default enabled providers are Element 84 Earth Search and Microsoft Planetary Computer. NASA CMR-STAC remains recorded but disabled until a dedicated adapter handles its provider-specific catalog structure.
 
-- Element 84 Earth Search
-- Microsoft Planetary Computer
+## Discovery and federation
 
-NASA CMR-STAC is recorded but disabled until a dedicated provider adapter handles its provider-specific catalog structure.
-
-## CLI
-
-Inspect a catalog's advertised capabilities:
+Discover from a registered provider:
 
 ```bash
-stac-scout inspect-catalog https://earth-search.aws.element84.com/v1
+stac-scout discover request.json --provider earth-search
 ```
 
-Discover candidates from a raw catalog URL:
+Or use a raw STAC endpoint:
 
 ```bash
 stac-scout discover request.json \
   --catalog https://earth-search.aws.element84.com/v1
 ```
 
-Or use a registered provider:
-
-```bash
-stac-scout discover request.json --provider earth-search
-```
-
-Federate discovery across the enabled provider registry:
+Federate across enabled providers:
 
 ```bash
 stac-scout federate request.json
 ```
 
-Limit federation to explicit providers:
+Federation keeps provider candidates visible. `sci:doi` produces an `exact` identity; matching collection/platform/instrument metadata produces only a `probable` identity and is never silently collapsed.
 
-```bash
-stac-scout federate request.json \
-  --provider earth-search \
-  --provider planetary-computer
-```
-
-Federation keeps each provider candidate visible. Exact identifiers such as `sci:doi` produce `exact` identity groups. Matching collection/platform/instrument metadata produces only `probable` groups and is not silently collapsed.
-
-Verify live item availability:
+## Verify and plan
 
 ```bash
 stac-scout verify request.json \
   --provider earth-search \
   --collection sentinel-2-l2a
-```
 
-Build an access plan, manifest, and runnable recipe:
-
-```bash
 stac-scout plan request.json \
   --provider earth-search \
   --collection sentinel-2-l2a \
   --manifest scout.manifest.json \
   --recipe load.py
-```
 
-For Planetary Computer, the generated recipe uses `planetary_computer.sign_inplace` rather than reimplementing SAS token handling.
-
-Replay a manifest later:
-
-```bash
 stac-scout replay scout.manifest.json
 ```
 
-Replay reports which item IDs were retained, disappeared, or appeared since the manifest was created.
+For Planetary Computer, generated recipes use `planetary_computer.sign_inplace` rather than reimplementing SAS token handling.
+
+## Live checks
+
+Normal CI is deterministic and does not depend on external services. A separate manual GitHub Actions workflow runs provider health and live federated discovery:
+
+```bash
+python evals/live.py
+```
 
 ## Architecture
 
 ```text
-ScoutRequest
-    │
-    ├── ProviderRegistry
-    │       └── adapter factory
-    │
-    ├── single-catalog ScoutEngine
-    │       ├── collection normalization
-    │       ├── deterministic constraints
-    │       ├── live item probe
-    │       ├── AOI coverage
-    │       ├── asset semantics
-    │       └── access planning
-    │
-    └── FederatedScout
-            ├── provider-isolated discovery
-            ├── cross-catalog identity
+natural language
+      │
+  IntentDraft
+      │
+  ScoutRequest
+      │
+      ├── ProviderRegistry ── health observations
+      │
+      ├── ScoutEngine
+      │     ├── normalization
+      │     ├── constraints
+      │     ├── live item verification
+      │     ├── AOI coverage
+      │     └── access planning
+      │
+      └── FederatedScout
+            ├── provider isolation
+            ├── dataset identity
             ├── duplicate groups
-            └── provider failures
+            └── explicit failures
 ```
 
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for module boundaries and invariants.
-
-## Repository layout
-
-```text
-src/stac_scout/          Core package
-src/stac_scout/data/     Built-in provider registry
-evals/                   Offline decision-contract evaluations
-skill/                   Agent-facing operating rules
-tests/                   Unit tests
-.github/                  CI
-```
-
-## Current scope
-
-`0.2.x` adds provider-aware federation while keeping the core deterministic. Place-name resolution and natural-language intent parsing remain outside the core request model. A caller may resolve those inputs before invoking Scout.
-
-The next milestones are richer cross-provider dataset equivalence, provider health observations, live federation evaluations, and an optional natural-language request parser.
 
 ## Development
 
@@ -211,7 +164,7 @@ python evals/runner.py
 python -m build
 ```
 
-CI runs on Python 3.12 and 3.13. Coverage must remain at or above 90%, the offline evaluation corpus must pass, and the built wheel must contain the provider registry.
+CI runs on Python 3.12 and 3.13. Coverage must stay at or above 90%.
 
 ## License
 
