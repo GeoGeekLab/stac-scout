@@ -15,10 +15,7 @@ def odc_stac_recipe(manifest: Manifest) -> str:
 
     if manifest.asset_signing is AssetSigning.PLANETARY_COMPUTER:
         signing_import = "import planetary_computer\n"
-        client = (
-            f"Client.open({manifest.catalog_url!r}, "
-            "modifier=planetary_computer.sign_inplace)"
-        )
+        client = f"Client.open({manifest.catalog_url!r}, modifier=planetary_computer.sign_inplace)"
     else:
         signing_import = ""
         client = f"Client.open({manifest.catalog_url!r})"
