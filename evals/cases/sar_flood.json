@@ -1,0 +1,20 @@
+{
+  "name": "sar-flood",
+  "request": {
+    "task": "map flood extent under persistent cloud cover",
+    "place": "Bangladesh",
+    "datetime": {
+      "start": "2026-07-01T00:00:00Z",
+      "end": "2026-07-14T23:59:59Z"
+    },
+    "data_type": "sar",
+    "required_measurements": ["vv"],
+    "max_spatial_resolution_m": 20,
+    "access": "open"
+  },
+  "expectations": {
+    "must_verify_items": true,
+    "required_measurements": ["vv"],
+    "forbidden_claims": ["optical cloud cover determines SAR usability"]
+  }
+}

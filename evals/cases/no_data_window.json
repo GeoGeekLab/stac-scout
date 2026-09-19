@@ -1,0 +1,19 @@
+{
+  "name": "no-data-window",
+  "request": {
+    "task": "verify whether imagery exists in a narrow historical window",
+    "place": "Reykjavik",
+    "datetime": {
+      "start": "1980-01-01T00:00:00Z",
+      "end": "1980-01-02T23:59:59Z"
+    },
+    "data_type": "optical",
+    "required_measurements": [],
+    "access": "open"
+  },
+  "expectations": {
+    "must_verify_items": true,
+    "required_measurements": [],
+    "forbidden_claims": ["collection extent proves item availability"]
+  }
+}

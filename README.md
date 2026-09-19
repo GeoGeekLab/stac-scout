@@ -4,22 +4,33 @@ Evidence-backed dataset selection and verification for STAC catalogs.
 
 **Find it. Check it. Use it.**
 
-STAC Scout sits above STAC clients and catalogs. It turns a data need into a structured request, compares candidate collections, verifies live availability, inspects assets, and produces a reproducible decision record.
+STAC Scout is a deterministic decision layer above STAC APIs. It helps answer a narrower and more useful question than "how do I query STAC?":
+
+> Which dataset fits this request, does matching data actually exist, what assets are needed, and how can the decision be reproduced?
 
 It does not replace `pystac-client`, `odc-stac`, or a STAC API.
 
-## Status
+## What it does
 
-Early development. The first milestone defines the public data model, command-line interface, provider registry, and evaluation format.
+- inspects STAC API capabilities before using optional features
+- normalizes collection metadata into a stable dataset model
+- ranks collection candidates with transparent lexical scoring
+- evaluates hard constraints with `pass` / `fail` / `unknown` semantics
+- verifies item availability for an AOI and time range
+- measures AOI coverage with ellipsoidal area
+- resolves requested measurements to declared asset/band metadata
+- estimates windowed transfer volume when `file:size` is available
+- emits reproducible manifests and `odc-stac` recipes
+- replays manifests to detect item-set drift
 
 ## Design rules
 
 - Never infer what can be inspected.
-- A collection-level claim is not item-level evidence.
+- Collection metadata is candidate evidence, not proof of item availability.
 - `intersects` is not the same as AOI coverage.
 - Unknown metadata is not a failed constraint.
 - Dataset recommendations must carry evidence and caveats.
-- Core verification stays deterministic; language models are optional at the edges.
+- Core verification stays deterministic; language models belong at the edges.
 
 ## Install
 
@@ -27,67 +38,112 @@ Early development. The first milestone defines the public data model, command-li
 python -m pip install -e ".[dev]"
 ```
 
-## CLI
+Python 3.12 or newer is required.
 
-Validate a request:
+## Request model
+
+A request is explicit about the scientific and operational constraints:
+
+```json
+{
+  "task": "vegetation analysis",
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [[[103.8, 1.2], [104.0, 1.2], [104.0, 1.4], [103.8, 1.4], [103.8, 1.2]]]
+  },
+  "datetime": {
+    "start": "2026-06-01T00:00:00Z",
+    "end": "2026-06-30T23:59:59Z"
+  },
+  "data_type": "optical",
+  "required_measurements": ["red", "nir"],
+  "max_spatial_resolution_m": 10
+}
+```
+
+Validate it:
 
 ```bash
 stac-scout validate-request request.json
 ```
 
-Print the request schema:
+## CLI
+
+Inspect a catalog's advertised capabilities:
 
 ```bash
-stac-scout schema request
+stac-scout inspect-catalog https://earth-search.aws.element84.com/v1
 ```
 
-Show the package version:
+Discover candidate collections:
 
 ```bash
-stac-scout version
+stac-scout discover request.json \
+  --catalog https://earth-search.aws.element84.com/v1
 ```
+
+Verify live item availability:
+
+```bash
+stac-scout verify request.json \
+  --catalog https://earth-search.aws.element84.com/v1 \
+  --collection sentinel-2-l2a
+```
+
+Build an access plan, manifest, and runnable recipe:
+
+```bash
+stac-scout plan request.json \
+  --catalog https://earth-search.aws.element84.com/v1 \
+  --collection sentinel-2-l2a \
+  --manifest scout.manifest.json \
+  --recipe load.py
+```
+
+Replay a manifest later:
+
+```bash
+stac-scout replay scout.manifest.json
+```
+
+Replay reports which item IDs were retained, disappeared, or appeared since the manifest was created.
+
+## Architecture
+
+```text
+ScoutRequest
+    │
+    ├── catalog capability inspection
+    ├── collection normalization
+    ├── deterministic constraints
+    ├── live item probe
+    ├── AOI coverage
+    ├── asset semantics
+    └── access planning
+            │
+            ├── Decision data
+            ├── scout.manifest.json
+            └── odc-stac recipe
+```
+
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for module boundaries and invariants.
 
 ## Repository layout
 
 ```text
 src/stac_scout/   Core package
+providers/        Catalog registry and provider notes
+evals/            Offline decision-contract evaluations
+skill/            Agent-facing operating rules
 tests/            Unit tests
-providers/        Catalog registry
-evals/            Evaluation cases
-skill/            Agent-facing skill instructions
 .github/           CI
 ```
 
-## Roadmap
+## Current scope
 
-### Milestone 1 — Deterministic core
+`0.1.x` focuses on the deterministic core. Place-name resolution and natural-language intent parsing are intentionally outside the core request model. A caller may resolve those inputs before invoking Scout.
 
-- STAC capability inspection
-- collection normalization
-- item availability probes
-- AOI coverage checks
-- asset and band normalization
-
-### Milestone 2 — Access planning
-
-- asset selection
-- byte and pixel estimates
-- output-grid and resampling plans
-- `odc-stac` recipes
-- replayable manifests
-
-### Milestone 3 — Reasoning layer
-
-- natural-language request parsing
-- candidate explanation
-- provider-aware trade-off summaries
-
-### Milestone 4 — Federation
-
-- cross-catalog discovery
-- duplicate dataset detection
-- provider comparison
-- catalog health tracking
+Provider-specific adapters, cross-provider dataset identity, richer access-cost estimation, and an optional reasoning layer are later milestones.
 
 ## Development
 
@@ -97,6 +153,8 @@ ruff format --check .
 mypy
 pytest --cov=stac_scout --cov-report=term-missing
 ```
+
+CI runs on Python 3.12 and 3.13. Coverage must remain at or above 90%.
 
 ## License
 

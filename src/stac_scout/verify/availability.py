@@ -37,7 +37,8 @@ def probe_items(
             try:
                 coverage, item_fraction = coverage_metrics(aoi_geojson, geometry)
             except (TypeError, ValueError):
-                warnings.append(f"could not measure coverage for item {item.get('id', '<unknown>')}")
+                item_id = item.get("id", "<unknown>")
+                warnings.append(f"could not measure coverage for item {item_id}")
 
         properties = item.get("properties", {})
         cloud_cover = properties.get("eo:cloud_cover")
