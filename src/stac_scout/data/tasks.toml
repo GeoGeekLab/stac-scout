@@ -1,0 +1,111 @@
+[tasks.vegetation_condition]
+label = "Vegetation condition"
+rule_id = "eo.vegetation-condition.v1"
+data_type = "optical"
+temporal_strategy = "single_window"
+required_measurements = ["red", "nir"]
+preferred_measurements = ["swir16"]
+preferred_processing_levels = ["surface_reflectance"]
+preferred_masks = ["cloud", "quality"]
+rationale = "Red and near-infrared support vegetation-index and canopy-condition analysis; surface reflectance and quality masking reduce atmospheric and cloud contamination."
+sources = [
+  "https://www.usgs.gov/special-topics/remote-sensing-phenology/science/ndvi-foundation-remote-sensing-phenology",
+  "https://eros.usgs.gov/earthshots/ndvi"
+]
+
+[tasks.wildfire_impact]
+label = "Wildfire impact"
+rule_id = "eo.wildfire-impact.v1"
+data_type = "optical"
+temporal_strategy = "before_after"
+required_measurements = ["nir", "swir22"]
+preferred_measurements = ["swir16", "red"]
+preferred_processing_levels = ["surface_reflectance"]
+preferred_masks = ["cloud", "quality"]
+rationale = "Near-infrared and SWIR2 support NBR-based burn assessment; before/after observations are needed for differenced burn-severity measures."
+sources = [
+  "https://www.usgs.gov/landsat-missions/landsat-normalized-burn-ratio",
+  "https://burnseverity.cr.usgs.gov/ravg/background-products-applications"
+]
+
+[tasks.flood_extent]
+label = "Flood extent"
+rule_id = "eo.flood-extent.v1"
+data_type = "sar"
+temporal_strategy = "before_after"
+required_measurements = []
+preferred_measurements = ["vv", "vh"]
+preferred_processing_levels = ["analysis_ready"]
+preferred_masks = []
+rationale = "SAR can observe flooding through cloud cover and at night; polarization choice is product- and scene-dependent, so VV/VH are preferences rather than universal hard requirements."
+sources = [
+  "https://appliedsciences.nasa.gov/get-involved/training/english/ask-nasa-arset-radar-remote-sensing-flood-monitoring",
+  "https://appliedsciences.nasa.gov/what-we-do/disasters/disasters-activations/hawaii-floods-march-2026"
+]
+
+[tasks.surface_water]
+label = "Surface water"
+rule_id = "eo.surface-water.v1"
+data_type = "optical"
+temporal_strategy = "single_window"
+required_measurements = ["green", "swir16"]
+preferred_measurements = ["nir"]
+preferred_processing_levels = ["surface_reflectance"]
+preferred_masks = ["cloud", "quality"]
+rationale = "Green and shorter-wave SWIR support a stable normalized-difference water mapping default; NIR remains useful as an alternate or complementary discriminator."
+sources = [
+  "https://www.usgs.gov/node/97553",
+  "https://www.usgs.gov/centers/eros/science/usgs-eros-archive-vegetation-monitoring-eviirs-global-ndwi"
+]
+
+[tasks.snow_cover]
+label = "Snow cover"
+rule_id = "eo.snow-cover.v1"
+data_type = "optical"
+temporal_strategy = "single_window"
+required_measurements = ["green", "swir16"]
+preferred_measurements = ["nir"]
+preferred_processing_levels = ["surface_reflectance"]
+preferred_masks = ["cloud", "quality"]
+rationale = "Green and SWIR1 support NDSI snow mapping; cloud and quality information is important because clouds can resemble snow in visible imagery."
+sources = [
+  "https://www.usgs.gov/landsat-missions/normalized-difference-snow-index"
+]
+
+[tasks.land_cover_change]
+label = "Land-cover change"
+rule_id = "eo.land-cover-change.v1"
+data_type = "optical"
+temporal_strategy = "before_after"
+required_measurements = ["red", "nir", "swir16"]
+preferred_measurements = ["swir22"]
+preferred_processing_levels = ["surface_reflectance"]
+preferred_masks = ["cloud", "quality"]
+rationale = "A multispectral red/NIR/SWIR default captures complementary vegetation and moisture responses; explicit comparison windows are needed for change analysis."
+sources = []
+
+[tasks.urban_change]
+label = "Urban change"
+rule_id = "eo.urban-change.v1"
+data_type = "optical"
+temporal_strategy = "before_after"
+required_measurements = ["red", "nir", "swir16"]
+preferred_measurements = ["swir22"]
+preferred_processing_levels = ["surface_reflectance"]
+preferred_masks = ["cloud", "quality"]
+rationale = "A multispectral red/NIR/SWIR default supports separation of built surfaces, vegetation, and moisture; change detection requires explicit comparison windows."
+sources = []
+
+[tasks.terrain]
+label = "Terrain analysis"
+rule_id = "eo.terrain.v1"
+data_type = "elevation"
+temporal_strategy = "static"
+required_measurements = ["elevation"]
+preferred_measurements = []
+preferred_processing_levels = ["dem"]
+preferred_masks = ["void"]
+rationale = "Terrain analysis requires an elevation surface; DEM products and void information are preferred when available."
+sources = [
+  "https://www.usgs.gov/faqs/what-difference-between-lidar-data-and-a-digital-elevation-model-dem"
+]

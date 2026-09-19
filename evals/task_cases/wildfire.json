@@ -1,0 +1,18 @@
+{
+  "name": "wildfire-impact-defaults",
+  "task_type": "wildfire_impact",
+  "request": {
+    "task": "assess burn severity after a wildfire",
+    "place": "California",
+    "datetime": {
+      "start": "2026-08-01T00:00:00Z",
+      "end": "2026-08-31T23:59:59Z"
+    }
+  },
+  "expectations": {
+    "data_type": "optical",
+    "required_measurements": ["nir", "swir22"],
+    "temporal_strategy": "before_after",
+    "follow_up_requirements": ["comparison_windows"]
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "name": "flood-extent-defaults",
+  "task_type": "flood_extent",
+  "request": {
+    "task": "map flood extent despite cloud cover",
+    "place": "Bangladesh",
+    "datetime": {
+      "start": "2026-07-01T00:00:00Z",
+      "end": "2026-07-14T23:59:59Z"
+    }
+  },
+  "expectations": {
+    "data_type": "sar",
+    "required_measurements": [],
+    "temporal_strategy": "before_after",
+    "follow_up_requirements": ["comparison_windows"]
+  }
+}

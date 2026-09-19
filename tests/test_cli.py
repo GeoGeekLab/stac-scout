@@ -12,14 +12,7 @@ from stac_scout.cli import _resolve_adapter, app
 runner = CliRunner()
 
 
-def test_version_command() -> None:
-    result = runner.invoke(app, ["version"])
-
-    assert result.exit_code == 0
-    assert "0.3.0" in result.output
-
-
-def test_validate_request(tmp_path: Path) -> None:
+def _request_file(tmp_path: Path) -> Path:
     path = tmp_path / "request.json"
     path.write_text(
         json.dumps(
@@ -30,17 +23,27 @@ def test_validate_request(tmp_path: Path) -> None:
                     "start": "2026-06-01T00:00:00Z",
                     "end": "2026-06-30T23:59:59Z",
                 },
-                "data_type": "optical",
-                "required_measurements": ["red", "nir"],
             }
         ),
         encoding="utf-8",
     )
+    return path
+
+
+def test_version_command() -> None:
+    result = runner.invoke(app, ["version"])
+
+    assert result.exit_code == 0
+    assert "0.4.0" in result.output
+
+
+def test_validate_request(tmp_path: Path) -> None:
+    path = _request_file(tmp_path)
 
     result = runner.invoke(app, ["validate-request", str(path)])
 
     assert result.exit_code == 0
-    assert '"data_type": "optical"' in result.output
+    assert '"task": "vegetation analysis"' in result.output
 
 
 def test_validate_request_rejects_invalid_input(tmp_path: Path) -> None:
@@ -62,11 +65,33 @@ def test_providers_command_lists_enabled_registry() -> None:
     assert '"key": "nasa-cmr"' not in result.stdout
 
 
-def test_providers_command_can_include_disabled_registry() -> None:
-    result = runner.invoke(app, ["providers", "--all"])
+def test_tasks_command_lists_task_registry() -> None:
+    result = runner.invoke(app, ["tasks"])
 
     assert result.exit_code == 0
-    assert '"key": "nasa-cmr"' in result.stdout
+    assert '"task_type": "wildfire_impact"' in result.stdout
+    assert '"task_type": "flood_extent"' in result.stdout
+
+
+def test_task_profile_command() -> None:
+    result = runner.invoke(app, ["task-profile", "snow_cover"])
+
+    assert result.exit_code == 0
+    assert '"required_measurements"' in result.stdout
+    assert '"green"' in result.stdout
+    assert '"swir16"' in result.stdout
+
+
+def test_advise_command_derives_requirements(tmp_path: Path) -> None:
+    result = runner.invoke(
+        app,
+        ["advise", str(_request_file(tmp_path)), "--task", "vegetation_condition"],
+    )
+
+    assert result.exit_code == 0
+    assert '"data_type": "optical"' in result.stdout
+    assert '"red"' in result.stdout
+    assert '"nir"' in result.stdout
 
 
 def test_resolve_adapter_requires_exactly_one_catalog_target() -> None:
@@ -78,22 +103,10 @@ def test_resolve_adapter_requires_exactly_one_catalog_target() -> None:
 
 
 def test_discover_rejects_unknown_provider(tmp_path: Path) -> None:
-    path = tmp_path / "request.json"
-    path.write_text(
-        json.dumps(
-            {
-                "task": "vegetation analysis",
-                "place": "Singapore",
-                "datetime": {
-                    "start": "2026-06-01T00:00:00Z",
-                    "end": "2026-06-30T23:59:59Z",
-                },
-            }
-        ),
-        encoding="utf-8",
+    result = runner.invoke(
+        app,
+        ["discover", str(_request_file(tmp_path)), "--provider", "missing"],
     )
-
-    result = runner.invoke(app, ["discover", str(path), "--provider", "missing"])
 
     assert result.exit_code != 0
     assert "unknown provider" in result.output

@@ -12,12 +12,21 @@ from stac_scout import __version__
 from stac_scout.catalogs import CatalogAdapter, GenericStacAdapter, build_adapter, inspect_catalog
 from stac_scout.federation import FederatedScout
 from stac_scout.health import check_providers
-from stac_scout.models import IntentDraft, Manifest, ProviderSpec, ScoutRequest
+from stac_scout.models import (
+    IntentDraft,
+    Manifest,
+    ProviderSpec,
+    ScoutRequest,
+    TaskAdvice,
+    TaskProfile,
+)
 from stac_scout.planning import odc_stac_recipe
 from stac_scout.provenance import read_manifest, replay_manifest, write_manifest
 from stac_scout.reasoning import intent_instructions
 from stac_scout.registry import ProviderRegistry, UnknownProviderError
 from stac_scout.scout import ScoutEngine
+from stac_scout.tasking import TaskAdvisor
+from stac_scout.tasks import TaskRegistry
 
 app = typer.Typer(add_completion=False, no_args_is_help=True)
 console = Console()
@@ -98,6 +107,53 @@ def providers(
             for provider in registry.all(include_disabled=include_disabled)
         ]
     )
+
+
+@app.command("tasks")
+def tasks() -> None:
+    _print_json(
+        [profile.model_dump(mode="json") for profile in TaskRegistry.builtin().all()]
+    )
+
+
+@app.command("task-profile")
+def task_profile(task: str) -> None:
+    try:
+        profile = TaskRegistry.builtin().get(task)
+    except ValueError as exc:
+        raise typer.BadParameter(f"unknown task: {task}") from exc
+    _print_json(profile)
+
+
+@app.command("advise")
+def advise(
+    request_path: Annotated[Path, typer.Argument(exists=True, dir_okay=False, readable=True)],
+    task: Annotated[str, typer.Option("--task")],
+) -> None:
+    request = _load_request(request_path)
+    try:
+        advice = TaskAdvisor().advise(request, task)
+    except ValueError as exc:
+        raise typer.BadParameter(f"unknown task: {task}") from exc
+    _print_json(advice)
+
+
+@app.command("advise-intent")
+def advise_intent(
+    path: Annotated[Path, typer.Argument(exists=True, dir_okay=False, readable=True)],
+) -> None:
+    try:
+        draft = IntentDraft.model_validate_json(path.read_text(encoding="utf-8"))
+        request = draft.to_request()
+    except (OSError, ValidationError, ValueError) as exc:
+        console.print(f"[red]unresolved intent[/red]: {exc}", highlight=False)
+        raise typer.Exit(code=2) from exc
+
+    if draft.task_type is None:
+        console.print("[red]unresolved intent[/red]: task_type is required", highlight=False)
+        raise typer.Exit(code=2)
+
+    _print_json(TaskAdvisor().advise(request, draft.task_type))
 
 
 @app.command("intent-contract")
@@ -295,11 +351,16 @@ def replay(
 
 @app.command("schema")
 def schema(
-    target: Annotated[str, typer.Argument(help="Schema name: request, intent, or manifest")],
+    target: Annotated[
+        str,
+        typer.Argument(help="Schema name: request, intent, task-profile, task-advice, or manifest"),
+    ],
 ) -> None:
     models: dict[str, type[BaseModel]] = {
         "request": ScoutRequest,
         "intent": IntentDraft,
+        "task-profile": TaskProfile,
+        "task-advice": TaskAdvice,
         "manifest": Manifest,
     }
     model = models.get(target)

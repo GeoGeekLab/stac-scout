@@ -20,8 +20,12 @@ def intent_instructions() -> str:
     return (
         "Extract only information supported by the user's request. "
         "Do not invent coordinates, dates, dataset names, measurement names, or constraints. "
-        "Use `unresolved` for required information that is missing or ambiguous. "
-        "Use `assumptions` only for explicit interpretation choices, never hidden guesses. "
+        "If the stated goal clearly maps to a task_type allowed by the schema, set task_type; "
+        "otherwise leave it null and mark the ambiguity unresolved. "
+        "Do not derive spectral measurements from task_type; the deterministic task registry "
+        "owns that knowledge. "
+        "Use unresolved for required information that is missing or ambiguous. "
+        "Use assumptions only for explicit interpretation choices, never hidden guesses. "
         "Return data that conforms exactly to the supplied JSON schema."
     )
 

@@ -1,3 +1,4 @@
+from .advice import TaskAdvice
 from .catalog import CatalogCapabilities
 from .dataset import (
     AssetInfo,
@@ -25,6 +26,13 @@ from .report import (
     VerificationStatus,
 )
 from .request import AccessPolicy, DataType, ScoutRequest, TimeRange
+from .task import (
+    DerivedRequirement,
+    GeoTask,
+    RequirementStrength,
+    TaskProfile,
+    TemporalStrategy,
+)
 
 __all__ = [
     "AccessPlan",
@@ -41,7 +49,9 @@ __all__ = [
     "DatasetCard",
     "DatasetIdentity",
     "DecisionReport",
+    "DerivedRequirement",
     "Evidence",
+    "GeoTask",
     "IdentityStrength",
     "IntentDraft",
     "ItemEvidence",
@@ -51,7 +61,11 @@ __all__ = [
     "ProviderHealth",
     "ProviderHealthStatus",
     "ProviderSpec",
+    "RequirementStrength",
     "ScoutRequest",
+    "TaskAdvice",
+    "TaskProfile",
+    "TemporalStrategy",
     "TimeRange",
     "UnresolvedIntentError",
     "VerificationStatus",

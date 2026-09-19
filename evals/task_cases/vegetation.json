@@ -1,0 +1,18 @@
+{
+  "name": "vegetation-condition-defaults",
+  "task_type": "vegetation_condition",
+  "request": {
+    "task": "assess vegetation condition",
+    "place": "Singapore",
+    "datetime": {
+      "start": "2026-06-01T00:00:00Z",
+      "end": "2026-06-30T23:59:59Z"
+    }
+  },
+  "expectations": {
+    "data_type": "optical",
+    "required_measurements": ["red", "nir"],
+    "temporal_strategy": "single_window",
+    "follow_up_requirements": []
+  }
+}

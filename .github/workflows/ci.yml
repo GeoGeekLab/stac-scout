@@ -36,5 +36,7 @@ jobs:
 
           wheel = glob.glob("dist/*.whl")[0]
           with zipfile.ZipFile(wheel) as archive:
-              assert "stac_scout/data/providers.toml" in archive.namelist()
+              names = set(archive.namelist())
+              assert "stac_scout/data/providers.toml" in names
+              assert "stac_scout/data/tasks.toml" in names
           PY

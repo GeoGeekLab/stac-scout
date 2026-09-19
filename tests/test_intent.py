@@ -5,7 +5,7 @@ from typing import Any
 
 import pytest
 
-from stac_scout.models import IntentDraft, TimeRange, UnresolvedIntentError
+from stac_scout.models import GeoTask, IntentDraft, TimeRange, UnresolvedIntentError
 from stac_scout.reasoning import IntentParser, intent_instructions
 
 
@@ -31,6 +31,7 @@ class Extractor:
 def test_intent_draft_resolves_to_request() -> None:
     draft = IntentDraft(
         task="vegetation analysis",
+        task_type=GeoTask.VEGETATION_CONDITION,
         place="Singapore",
         datetime=TimeRange(
             start=datetime(2026, 6, 1, tzinfo=UTC),
@@ -41,6 +42,7 @@ def test_intent_draft_resolves_to_request() -> None:
 
     request = draft.to_request()
 
+    assert draft.task_type is GeoTask.VEGETATION_CONDITION
     assert request.place == "Singapore"
     assert request.required_measurements == ("red", "nir")
 
@@ -56,6 +58,7 @@ def test_intent_parser_is_model_agnostic() -> None:
     extractor = Extractor(
         {
             "task": "vegetation analysis",
+            "task_type": "vegetation_condition",
             "place": "Singapore",
             "unresolved": ["datetime"],
         }
@@ -64,7 +67,9 @@ def test_intent_parser_is_model_agnostic() -> None:
     draft = IntentParser(extractor).parse("find optical imagery")
 
     assert draft.place == "Singapore"
+    assert draft.task_type is GeoTask.VEGETATION_CONDITION
     assert extractor.schema is not None
     assert "properties" in extractor.schema
     assert extractor.instructions == intent_instructions()
     assert "Do not invent coordinates" in extractor.instructions
+    assert "Do not derive spectral measurements" in extractor.instructions

@@ -5,6 +5,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from .request import AccessPolicy, DataType, ScoutRequest, TimeRange
+from .task import GeoTask
 
 
 class UnresolvedIntentError(ValueError):
@@ -15,6 +16,7 @@ class IntentDraft(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     task: str = Field(min_length=1)
+    task_type: GeoTask | None = None
     geometry: dict[str, Any] | None = None
     place: str | None = None
     datetime: TimeRange | None = None
