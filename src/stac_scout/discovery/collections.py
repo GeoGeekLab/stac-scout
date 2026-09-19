@@ -38,9 +38,7 @@ def rank_collections(
     ranked: list[RankedDataset] = []
     for card in cards:
         text = " ".join(
-            part
-            for part in (card.collection_id, card.title or "", card.description or "")
-            if part
+            part for part in (card.collection_id, card.title or "", card.description or "") if part
         )
         haystack = _tokens(text) | set(card.measurements)
         overlap = len(query_tokens & haystack)
