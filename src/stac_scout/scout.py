@@ -8,6 +8,7 @@ from stac_scout.constraints import evaluate_constraints
 from stac_scout.discovery import RankedDataset, rank_collections
 from stac_scout.models import (
     AccessPlan,
+    AssetSigning,
     AvailabilityProbe,
     ConstraintCheck,
     DatasetCard,
@@ -82,10 +83,19 @@ class ScoutEngine:
             probe,
             output_crs=output_crs,
         )
+        provider_key = getattr(self.adapter, "provider_key", None)
+        if not isinstance(provider_key, str):
+            provider_key = None
+        asset_signing = getattr(self.adapter, "asset_signing", AssetSigning.NONE)
+        if not isinstance(asset_signing, AssetSigning):
+            asset_signing = AssetSigning.NONE
+
         manifest = build_manifest(
             request,
             catalog_url=self.adapter.catalog_url,
             collection_id=collection_id,
+            provider_key=provider_key,
+            asset_signing=asset_signing,
             probe=probe,
             access_plan=access_plan,
         )

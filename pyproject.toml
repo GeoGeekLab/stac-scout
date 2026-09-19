@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "stac-scout"
-version = "0.1.0"
+version = "0.2.0"
 description = "Evidence-backed dataset selection and verification for STAC catalogs."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -33,12 +33,14 @@ Repository = "https://github.com/GeoGeekLab/stac-scout"
 Issues = "https://github.com/GeoGeekLab/stac-scout/issues"
 
 [project.optional-dependencies]
+planetary-computer = ["planetary-computer>=1.0.0"]
 raster = [
   "odc-stac>=0.4,<1",
   "rasterio>=1.4,<2",
   "xarray>=2024.7",
 ]
 dev = [
+  "build>=1.2,<2",
   "mypy>=1.11,<2",
   "pytest>=8.3,<10",
   "pytest-cov>=5,<7",

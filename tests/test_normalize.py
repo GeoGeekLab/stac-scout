@@ -9,13 +9,18 @@ def test_normalize_collection_extracts_assets_and_resolution() -> None:
             "id": "sentinel-test",
             "title": "Sentinel Test",
             "description": "Surface reflectance",
+            "sci:doi": "10.1234/example",
             "license": "proprietary",
             "providers": [{"name": "Example"}],
             "extent": {
                 "spatial": {"bbox": [[-180, -90, 180, 90]]},
                 "temporal": {"interval": [["2020-01-01T00:00:00Z", None]]},
             },
-            "summaries": {"gsd": [20, 10]},
+            "summaries": {
+                "gsd": [20, 10],
+                "platform": ["sentinel-2a", "sentinel-2b"],
+                "instruments": ["msi"],
+            },
             "item_assets": {
                 "B04": {
                     "type": "image/tiff; application=geotiff; profile=cloud-optimized",
@@ -29,6 +34,9 @@ def test_normalize_collection_extracts_assets_and_resolution() -> None:
 
     assert card.spatial_resolution_m == 10
     assert card.providers == ("Example",)
+    assert card.doi == "10.1234/example"
+    assert card.platforms == ("sentinel-2a", "sentinel-2b")
+    assert card.instruments == ("msi",)
     assert "red" in card.measurements
     assert card.assets[0].key == "B04"
 

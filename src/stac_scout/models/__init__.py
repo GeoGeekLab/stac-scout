@@ -6,7 +6,14 @@ from .dataset import (
     ConstraintStatus,
     DatasetCard,
 )
+from .identity import DatasetIdentity, IdentityStrength
 from .probe import AvailabilityProbe, ItemEvidence
+from .provider import (
+    AssetSigning,
+    ProviderAccess,
+    ProviderAdapter,
+    ProviderSpec,
+)
 from .report import (
     AccessPlan,
     CandidateAssessment,
@@ -21,6 +28,7 @@ __all__ = [
     "AccessPlan",
     "AccessPolicy",
     "AssetInfo",
+    "AssetSigning",
     "AvailabilityProbe",
     "BandInfo",
     "CandidateAssessment",
@@ -29,10 +37,15 @@ __all__ = [
     "ConstraintStatus",
     "DataType",
     "DatasetCard",
+    "DatasetIdentity",
     "DecisionReport",
     "Evidence",
+    "IdentityStrength",
     "ItemEvidence",
     "Manifest",
+    "ProviderAccess",
+    "ProviderAdapter",
+    "ProviderSpec",
     "ScoutRequest",
     "TimeRange",
     "VerificationStatus",

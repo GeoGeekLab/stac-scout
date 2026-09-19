@@ -9,10 +9,12 @@ from pydantic import BaseModel, ValidationError
 from rich.console import Console
 
 from stac_scout import __version__
-from stac_scout.catalogs import GenericStacAdapter, inspect_catalog
-from stac_scout.models import Manifest, ScoutRequest
+from stac_scout.catalogs import CatalogAdapter, GenericStacAdapter, build_adapter, inspect_catalog
+from stac_scout.federation import FederatedScout
+from stac_scout.models import Manifest, ProviderSpec, ScoutRequest
 from stac_scout.planning import odc_stac_recipe
 from stac_scout.provenance import read_manifest, replay_manifest, write_manifest
+from stac_scout.registry import ProviderRegistry, UnknownProviderError
 from stac_scout.scout import ScoutEngine
 
 app = typer.Typer(add_completion=False, no_args_is_help=True)
@@ -29,6 +31,35 @@ def _print_json(value: Any) -> None:
         console.print_json(value.model_dump_json(indent=2))
         return
     console.print_json(json.dumps(value, indent=2, default=str))
+
+
+def _provider(key: str, *, catalog_url: str | None = None) -> ProviderSpec:
+    registry = ProviderRegistry.builtin()
+    try:
+        provider = registry.get(key)
+    except UnknownProviderError as exc:
+        raise typer.BadParameter(f"unknown provider: {key}") from exc
+    if not provider.enabled:
+        raise typer.BadParameter(f"provider is disabled: {key}")
+    if catalog_url is not None:
+        provider = provider.model_copy(update={"url": catalog_url})
+    return provider
+
+
+def _resolve_adapter(catalog: str | None, provider: str | None) -> CatalogAdapter:
+    if (catalog is None) == (provider is None):
+        raise typer.BadParameter("provide exactly one of --catalog or --provider")
+    if provider is not None:
+        return build_adapter(_provider(provider))
+    assert catalog is not None
+    return GenericStacAdapter(catalog)
+
+
+def _adapter_for_manifest(manifest: Manifest) -> CatalogAdapter:
+    if manifest.provider_key is None:
+        return GenericStacAdapter(manifest.catalog_url)
+    provider = _provider(manifest.provider_key, catalog_url=manifest.catalog_url)
+    return build_adapter(provider)
 
 
 @app.command("version")
@@ -54,14 +85,28 @@ def inspect_catalog_command(url: str) -> None:
     _print_json(inspect_catalog(url))
 
 
+@app.command("providers")
+def providers(
+    include_disabled: Annotated[bool, typer.Option("--all")] = False,
+) -> None:
+    registry = ProviderRegistry.builtin()
+    _print_json(
+        [
+            provider.model_dump(mode="json")
+            for provider in registry.all(include_disabled=include_disabled)
+        ]
+    )
+
+
 @app.command("discover")
 def discover(
     request_path: Annotated[Path, typer.Argument(exists=True, dir_okay=False, readable=True)],
-    catalog: Annotated[str, typer.Option("--catalog")],
+    catalog: Annotated[str | None, typer.Option("--catalog")] = None,
+    provider: Annotated[str | None, typer.Option("--provider")] = None,
     limit: Annotated[int, typer.Option(min=1, max=100)] = 10,
 ) -> None:
     request = _load_request(request_path)
-    engine = ScoutEngine(GenericStacAdapter(catalog))
+    engine = ScoutEngine(_resolve_adapter(catalog, provider))
     results = engine.discover(request, limit=limit)
     payload = [
         {
@@ -75,15 +120,76 @@ def discover(
     _print_json(payload)
 
 
+@app.command("federate")
+def federate(
+    request_path: Annotated[Path, typer.Argument(exists=True, dir_okay=False, readable=True)],
+    provider: Annotated[list[str] | None, typer.Option("--provider")] = None,
+    per_provider_limit: Annotated[int, typer.Option(min=1, max=100)] = 10,
+    limit: Annotated[int, typer.Option(min=1, max=500)] = 20,
+) -> None:
+    request = _load_request(request_path)
+    registry = ProviderRegistry.builtin()
+    try:
+        scout = FederatedScout.from_registry(registry, provider)
+    except (UnknownProviderError, ValueError) as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    result = scout.discover(
+        request,
+        per_provider_limit=per_provider_limit,
+        limit=limit,
+    )
+    _print_json(
+        {
+            "candidates": [
+                {
+                    "provider": candidate.provider_key,
+                    "collection_id": candidate.dataset.collection_id,
+                    "title": candidate.dataset.title,
+                    "score": candidate.score,
+                    "identity": candidate.identity.model_dump(mode="json"),
+                    "constraints": [
+                        check.model_dump(mode="json") for check in candidate.constraints
+                    ],
+                }
+                for candidate in result.candidates
+            ],
+            "duplicate_groups": [
+                {
+                    "identity": group.identity.model_dump(mode="json"),
+                    "safe_to_collapse": group.safe_to_collapse,
+                    "candidates": [
+                        {
+                            "provider": candidate.provider_key,
+                            "collection_id": candidate.dataset.collection_id,
+                        }
+                        for candidate in group.candidates
+                    ],
+                }
+                for group in result.duplicate_groups
+            ],
+            "failures": [
+                {
+                    "provider": failure.provider_key,
+                    "error_type": failure.error_type,
+                    "message": failure.message,
+                }
+                for failure in result.failures
+            ],
+        }
+    )
+
+
 @app.command("verify")
 def verify(
     request_path: Annotated[Path, typer.Argument(exists=True, dir_okay=False, readable=True)],
     collection: Annotated[str, typer.Option("--collection")],
-    catalog: Annotated[str, typer.Option("--catalog")],
+    catalog: Annotated[str | None, typer.Option("--catalog")] = None,
+    provider: Annotated[str | None, typer.Option("--provider")] = None,
     max_items: Annotated[int, typer.Option(min=1, max=10_000)] = 100,
 ) -> None:
     request = _load_request(request_path)
-    _, probe = ScoutEngine(GenericStacAdapter(catalog)).verify(
+    _, probe = ScoutEngine(_resolve_adapter(catalog, provider)).verify(
         request,
         collection,
         max_items=max_items,
@@ -95,13 +201,14 @@ def verify(
 def plan(
     request_path: Annotated[Path, typer.Argument(exists=True, dir_okay=False, readable=True)],
     collection: Annotated[str, typer.Option("--collection")],
-    catalog: Annotated[str, typer.Option("--catalog")],
+    catalog: Annotated[str | None, typer.Option("--catalog")] = None,
+    provider: Annotated[str | None, typer.Option("--provider")] = None,
     manifest_path: Annotated[Path | None, typer.Option("--manifest")] = None,
     recipe_path: Annotated[Path | None, typer.Option("--recipe")] = None,
     max_items: Annotated[int, typer.Option(min=1, max=10_000)] = 100,
 ) -> None:
     request = _load_request(request_path)
-    result = ScoutEngine(GenericStacAdapter(catalog)).plan(
+    result = ScoutEngine(_resolve_adapter(catalog, provider)).plan(
         request,
         collection,
         max_items=max_items,
@@ -129,7 +236,7 @@ def replay(
     manifest = read_manifest(path)
     result = replay_manifest(
         manifest,
-        GenericStacAdapter(manifest.catalog_url),
+        _adapter_for_manifest(manifest),
         max_items=max_items,
     )
     _print_json(

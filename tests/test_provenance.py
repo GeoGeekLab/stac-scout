@@ -3,8 +3,11 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from stac_scout.models import (
     AccessPlan,
+    AssetSigning,
     AvailabilityProbe,
     ItemEvidence,
     ScoutRequest,
@@ -73,6 +76,29 @@ def test_recipe_contains_reproducible_query(scout_request: ScoutRequest) -> None
     assert "Client.open('https://example.test/stac')" in recipe
     assert "'collection-1'" in recipe
     assert "'B04', 'B08'" in recipe
+
+
+def test_planetary_computer_recipe_uses_official_signer(scout_request: ScoutRequest) -> None:
+    manifest = _manifest(scout_request).model_copy(
+        update={
+            "provider_key": "planetary-computer",
+            "asset_signing": AssetSigning.PLANETARY_COMPUTER,
+        }
+    )
+
+    recipe = odc_stac_recipe(manifest)
+
+    assert "import planetary_computer" in recipe
+    assert "modifier=planetary_computer.sign_inplace" in recipe
+
+
+def test_provider_dependent_signing_refuses_generic_recipe(scout_request: ScoutRequest) -> None:
+    manifest = _manifest(scout_request).model_copy(
+        update={"asset_signing": AssetSigning.PROVIDER_DEPENDENT}
+    )
+
+    with pytest.raises(ValueError, match="provider-dependent"):
+        odc_stac_recipe(manifest)
 
 
 def test_replay_reports_item_drift(scout_request: ScoutRequest) -> None:

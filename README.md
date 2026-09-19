@@ -22,6 +22,8 @@ It does not replace `pystac-client`, `odc-stac`, or a STAC API.
 - estimates windowed transfer volume when `file:size` is available
 - emits reproducible manifests and `odc-stac` recipes
 - replays manifests to detect item-set drift
+- federates discovery across multiple catalogs without hiding provider failures
+- groups cross-catalog duplicates conservatively using evidence-backed identity rules
 
 ## Design rules
 
@@ -30,6 +32,8 @@ It does not replace `pystac-client`, `odc-stac`, or a STAC API.
 - `intersects` is not the same as AOI coverage.
 - Unknown metadata is not a failed constraint.
 - Dataset recommendations must carry evidence and caveats.
+- Probable duplicates remain visible; only strong identities are safe to collapse.
+- Provider-specific access belongs behind adapters and manifests.
 - Core verification stays deterministic; language models belong at the edges.
 
 ## Install
@@ -39,6 +43,12 @@ python -m pip install -e ".[dev]"
 ```
 
 Python 3.12 or newer is required.
+
+Planetary Computer access recipes use Microsoft's official signing SDK:
+
+```bash
+python -m pip install -e ".[planetary-computer]"
+```
 
 ## Request model
 
@@ -67,6 +77,22 @@ Validate it:
 stac-scout validate-request request.json
 ```
 
+## Providers
+
+Built-in provider metadata lives in `src/stac_scout/data/providers.toml`.
+
+```bash
+stac-scout providers
+stac-scout providers --all
+```
+
+The default enabled providers are:
+
+- Element 84 Earth Search
+- Microsoft Planetary Computer
+
+NASA CMR-STAC is recorded but disabled until a dedicated provider adapter handles its provider-specific catalog structure.
+
 ## CLI
 
 Inspect a catalog's advertised capabilities:
@@ -75,18 +101,40 @@ Inspect a catalog's advertised capabilities:
 stac-scout inspect-catalog https://earth-search.aws.element84.com/v1
 ```
 
-Discover candidate collections:
+Discover candidates from a raw catalog URL:
 
 ```bash
 stac-scout discover request.json \
   --catalog https://earth-search.aws.element84.com/v1
 ```
 
+Or use a registered provider:
+
+```bash
+stac-scout discover request.json --provider earth-search
+```
+
+Federate discovery across the enabled provider registry:
+
+```bash
+stac-scout federate request.json
+```
+
+Limit federation to explicit providers:
+
+```bash
+stac-scout federate request.json \
+  --provider earth-search \
+  --provider planetary-computer
+```
+
+Federation keeps each provider candidate visible. Exact identifiers such as `sci:doi` produce `exact` identity groups. Matching collection/platform/instrument metadata produces only `probable` groups and is not silently collapsed.
+
 Verify live item availability:
 
 ```bash
 stac-scout verify request.json \
-  --catalog https://earth-search.aws.element84.com/v1 \
+  --provider earth-search \
   --collection sentinel-2-l2a
 ```
 
@@ -94,11 +142,13 @@ Build an access plan, manifest, and runnable recipe:
 
 ```bash
 stac-scout plan request.json \
-  --catalog https://earth-search.aws.element84.com/v1 \
+  --provider earth-search \
   --collection sentinel-2-l2a \
   --manifest scout.manifest.json \
   --recipe load.py
 ```
+
+For Planetary Computer, the generated recipe uses `planetary_computer.sign_inplace` rather than reimplementing SAS token handling.
 
 Replay a manifest later:
 
@@ -113,17 +163,22 @@ Replay reports which item IDs were retained, disappeared, or appeared since the 
 ```text
 ScoutRequest
     │
-    ├── catalog capability inspection
-    ├── collection normalization
-    ├── deterministic constraints
-    ├── live item probe
-    ├── AOI coverage
-    ├── asset semantics
-    └── access planning
-            │
-            ├── Decision data
-            ├── scout.manifest.json
-            └── odc-stac recipe
+    ├── ProviderRegistry
+    │       └── adapter factory
+    │
+    ├── single-catalog ScoutEngine
+    │       ├── collection normalization
+    │       ├── deterministic constraints
+    │       ├── live item probe
+    │       ├── AOI coverage
+    │       ├── asset semantics
+    │       └── access planning
+    │
+    └── FederatedScout
+            ├── provider-isolated discovery
+            ├── cross-catalog identity
+            ├── duplicate groups
+            └── provider failures
 ```
 
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for module boundaries and invariants.
@@ -131,19 +186,19 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for module boundaries and inv
 ## Repository layout
 
 ```text
-src/stac_scout/   Core package
-providers/        Catalog registry and provider notes
-evals/            Offline decision-contract evaluations
-skill/            Agent-facing operating rules
-tests/            Unit tests
-.github/           CI
+src/stac_scout/          Core package
+src/stac_scout/data/     Built-in provider registry
+evals/                   Offline decision-contract evaluations
+skill/                   Agent-facing operating rules
+tests/                   Unit tests
+.github/                  CI
 ```
 
 ## Current scope
 
-`0.1.x` focuses on the deterministic core. Place-name resolution and natural-language intent parsing are intentionally outside the core request model. A caller may resolve those inputs before invoking Scout.
+`0.2.x` adds provider-aware federation while keeping the core deterministic. Place-name resolution and natural-language intent parsing remain outside the core request model. A caller may resolve those inputs before invoking Scout.
 
-Provider-specific adapters, cross-provider dataset identity, richer access-cost estimation, and an optional reasoning layer are later milestones.
+The next milestones are richer cross-provider dataset equivalence, provider health observations, live federation evaluations, and an optional natural-language request parser.
 
 ## Development
 
@@ -152,9 +207,11 @@ ruff check .
 ruff format --check .
 mypy
 pytest --cov=stac_scout --cov-report=term-missing
+python evals/runner.py
+python -m build
 ```
 
-CI runs on Python 3.12 and 3.13. Coverage must remain at or above 90%.
+CI runs on Python 3.12 and 3.13. Coverage must remain at or above 90%, the offline evaluation corpus must pass, and the built wheel must contain the provider registry.
 
 ## License
 

@@ -1,0 +1,25 @@
+[providers.earth-search]
+name = "Element 84 Earth Search"
+url = "https://earth-search.aws.element84.com/v1"
+adapter = "generic"
+access = "open"
+asset_signing = "none"
+enabled = true
+
+[providers.planetary-computer]
+name = "Microsoft Planetary Computer"
+url = "https://planetarycomputer.microsoft.com/api/stac/v1"
+adapter = "planetary_computer"
+access = "open"
+asset_signing = "planetary_computer"
+enabled = true
+notes = "Asset access requires short-lived SAS signing."
+
+[providers.nasa-cmr]
+name = "NASA CMR-STAC"
+url = "https://cmr.earthdata.nasa.gov/stac"
+adapter = "generic"
+access = "mixed"
+asset_signing = "provider_dependent"
+enabled = false
+notes = "CMR-STAC exposes provider-specific catalogs; enable after a dedicated adapter is implemented."

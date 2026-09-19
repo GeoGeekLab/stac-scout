@@ -14,7 +14,7 @@ def test_version_command() -> None:
     result = runner.invoke(app, ["version"])
 
     assert result.exit_code == 0
-    assert "0.1.0" in result.stdout
+    assert "0.2.0" in result.output
 
 
 def test_validate_request(tmp_path: Path) -> None:
@@ -38,7 +38,7 @@ def test_validate_request(tmp_path: Path) -> None:
     result = runner.invoke(app, ["validate-request", str(path)])
 
     assert result.exit_code == 0
-    assert '"data_type": "optical"' in result.stdout
+    assert '"data_type": "optical"' in result.output
 
 
 def test_validate_request_rejects_invalid_input(tmp_path: Path) -> None:
@@ -49,3 +49,63 @@ def test_validate_request_rejects_invalid_input(tmp_path: Path) -> None:
 
     assert result.exit_code == 2
     assert "invalid request" in result.stdout
+
+
+def test_providers_command_lists_enabled_registry() -> None:
+    result = runner.invoke(app, ["providers"])
+
+    assert result.exit_code == 0
+    assert '"key": "earth-search"' in result.stdout
+    assert '"key": "planetary-computer"' in result.stdout
+    assert '"key": "nasa-cmr"' not in result.stdout
+
+
+def test_providers_command_can_include_disabled_registry() -> None:
+    result = runner.invoke(app, ["providers", "--all"])
+
+    assert result.exit_code == 0
+    assert '"key": "nasa-cmr"' in result.stdout
+
+
+def test_discover_requires_exactly_one_catalog_target(tmp_path: Path) -> None:
+    path = tmp_path / "request.json"
+    path.write_text(
+        json.dumps(
+            {
+                "task": "vegetation analysis",
+                "place": "Singapore",
+                "datetime": {
+                    "start": "2026-06-01T00:00:00Z",
+                    "end": "2026-06-30T23:59:59Z",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(app, ["discover", str(path)])
+
+    assert result.exit_code != 0
+    assert "provide exactly one of --catalog or --provider" in result.output
+
+
+def test_discover_rejects_unknown_provider(tmp_path: Path) -> None:
+    path = tmp_path / "request.json"
+    path.write_text(
+        json.dumps(
+            {
+                "task": "vegetation analysis",
+                "place": "Singapore",
+                "datetime": {
+                    "start": "2026-06-01T00:00:00Z",
+                    "end": "2026-06-30T23:59:59Z",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(app, ["discover", str(path), "--provider", "missing"])
+
+    assert result.exit_code != 0
+    assert "unknown provider" in result.output

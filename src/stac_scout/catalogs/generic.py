@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable
 from typing import Any, cast
 
-from stac_scout.models import CatalogCapabilities, ScoutRequest
+from stac_scout.models import AssetSigning, CatalogCapabilities, ScoutRequest
 
 from .capabilities import inspect_catalog
 
@@ -17,9 +17,13 @@ class GenericStacAdapter:
         self,
         catalog_url: str,
         *,
+        provider_key: str | None = None,
+        asset_signing: AssetSigning = AssetSigning.NONE,
         client_factory: Callable[[str], Any] | None = None,
     ) -> None:
         self.catalog_url = catalog_url
+        self.provider_key = provider_key
+        self.asset_signing = asset_signing
         self._client_factory = client_factory
 
     def _client(self) -> Any:

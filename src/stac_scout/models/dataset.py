@@ -48,8 +48,12 @@ class DatasetCard(BaseModel):
     collection_id: str
     title: str | None = None
     description: str | None = None
+    doi: str | None = None
     data_type: DataType | None = None
     providers: tuple[str, ...] = ()
+    platforms: tuple[str, ...] = ()
+    constellations: tuple[str, ...] = ()
+    instruments: tuple[str, ...] = ()
     license: str | None = None
     spatial_extent: tuple[float, float, float, float] | None = None
     temporal_start: datetime | None = None

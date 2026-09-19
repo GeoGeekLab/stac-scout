@@ -6,6 +6,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from .provider import AssetSigning
 from .request import ScoutRequest
 
 
@@ -67,6 +68,8 @@ class Manifest(BaseModel):
     request: ScoutRequest
     catalog_url: str
     collection_id: str
+    provider_key: str | None = None
+    asset_signing: AssetSigning = AssetSigning.NONE
     query: dict[str, Any]
     item_ids: tuple[str, ...] = ()
     asset_keys: tuple[str, ...] = ()

@@ -49,6 +49,19 @@ def _resolution(raw: dict[str, Any]) -> float | None:
     return min(values) if values else None
 
 
+def _string_values(raw: dict[str, Any], key: str) -> tuple[str, ...]:
+    value = raw.get(key)
+    if value is None:
+        summaries = raw.get("summaries", {})
+        value = summaries.get(key) if isinstance(summaries, dict) else None
+
+    if isinstance(value, str):
+        return (value,)
+    if isinstance(value, list):
+        return tuple(str(entry) for entry in value if isinstance(entry, str))
+    return ()
+
+
 def normalize_collection(raw: dict[str, Any], catalog_url: str) -> DatasetCard:
     start, end = _temporal_extent(raw)
     providers = tuple(
@@ -70,13 +83,18 @@ def normalize_collection(raw: dict[str, Any], catalog_url: str) -> DatasetCard:
 
     summary_bands = raw.get("summaries", {})
     bands = tuple(normalize_band(band) for band in band_definitions(summary_bands))
+    doi = raw.get("sci:doi")
 
     return DatasetCard(
         catalog_url=catalog_url,
         collection_id=str(raw["id"]),
         title=raw.get("title"),
         description=raw.get("description"),
+        doi=doi if isinstance(doi, str) else None,
         providers=providers,
+        platforms=_string_values(raw, "platform"),
+        constellations=_string_values(raw, "constellation"),
+        instruments=_string_values(raw, "instruments"),
         license=raw.get("license"),
         spatial_extent=_spatial_extent(raw),
         temporal_start=start,

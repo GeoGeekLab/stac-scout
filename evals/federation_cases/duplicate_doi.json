@@ -1,0 +1,29 @@
+{
+  "name": "duplicate-doi",
+  "collections": [
+    {
+      "catalog_url": "https://a.example/stac",
+      "collection": {
+        "id": "surface-reflectance-a",
+        "sci:doi": "10.1234/shared-dataset",
+        "extent": {
+          "spatial": {"bbox": [[-180, -90, 180, 90]]},
+          "temporal": {"interval": [[null, null]]}
+        }
+      }
+    },
+    {
+      "catalog_url": "https://b.example/stac",
+      "collection": {
+        "id": "surface-reflectance-b",
+        "sci:doi": "https://doi.org/10.1234/shared-dataset",
+        "extent": {
+          "spatial": {"bbox": [[-180, -90, 180, 90]]},
+          "temporal": {"interval": [[null, null]]}
+        }
+      }
+    }
+  ],
+  "expected_strength": "exact",
+  "expected_shared_identity": true
+}

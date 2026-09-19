@@ -26,3 +26,15 @@ jobs:
       - run: ruff format --check .
       - run: mypy
       - run: pytest --cov=stac_scout --cov-report=term-missing
+      - run: python evals/runner.py
+      - run: python -m build
+      - name: Verify wheel data
+        run: |
+          python - <<'PY'
+          import glob
+          import zipfile
+
+          wheel = glob.glob("dist/*.whl")[0]
+          with zipfile.ZipFile(wheel) as archive:
+              assert "stac_scout/data/providers.toml" in archive.namelist()
+          PY

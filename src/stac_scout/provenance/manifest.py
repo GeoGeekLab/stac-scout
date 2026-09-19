@@ -4,7 +4,13 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from stac_scout import __version__
-from stac_scout.models import AccessPlan, AvailabilityProbe, Manifest, ScoutRequest
+from stac_scout.models import (
+    AccessPlan,
+    AssetSigning,
+    AvailabilityProbe,
+    Manifest,
+    ScoutRequest,
+)
 
 
 def build_manifest(
@@ -14,6 +20,8 @@ def build_manifest(
     collection_id: str,
     probe: AvailabilityProbe,
     access_plan: AccessPlan,
+    provider_key: str | None = None,
+    asset_signing: AssetSigning = AssetSigning.NONE,
     generated_at: datetime | None = None,
 ) -> Manifest:
     query = {
@@ -29,6 +37,8 @@ def build_manifest(
         request=request,
         catalog_url=catalog_url,
         collection_id=collection_id,
+        provider_key=provider_key,
+        asset_signing=asset_signing,
         query=query,
         item_ids=tuple(item.item_id for item in probe.items),
         asset_keys=access_plan.assets,
