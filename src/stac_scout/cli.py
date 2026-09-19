@@ -111,9 +111,7 @@ def providers(
 
 @app.command("tasks")
 def tasks() -> None:
-    _print_json(
-        [profile.model_dump(mode="json") for profile in TaskRegistry.builtin().all()]
-    )
+    _print_json([profile.model_dump(mode="json") for profile in TaskRegistry.builtin().all()])
 
 
 @app.command("task-profile")
