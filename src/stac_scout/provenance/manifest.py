@@ -37,8 +37,7 @@ def build_manifest(
 
 
 def write_manifest(manifest: Manifest, path: Path) -> None:
-    path.write_text(manifest.model_dump_json(indent=2) + "
-", encoding="utf-8")
+    path.write_text(manifest.model_dump_json(indent=2) + "\n", encoding="utf-8")
 
 
 def read_manifest(path: Path) -> Manifest:
