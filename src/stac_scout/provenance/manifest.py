@@ -29,6 +29,10 @@ class UnsupportedManifestVersionError(ValueError):
     pass
 
 
+class ManifestIntegrityError(ValueError):
+    pass
+
+
 def _canonical_json(value: BaseModel | dict[str, Any]) -> str:
     payload: Any
     if isinstance(value, BaseModel):
@@ -208,4 +212,22 @@ def read_manifest(path: Path) -> Manifest:
             f"unsupported manifest schema version: {schema_version!r}"
         )
 
-    return Manifest.model_validate(payload)
+    manifest = Manifest.model_validate(payload)
+    if manifest.request_fingerprint != canonical_fingerprint(manifest.request):
+        raise ManifestIntegrityError("manifest request fingerprint does not match request")
+    if manifest.query_fingerprint != canonical_fingerprint(manifest.query):
+        raise ManifestIntegrityError("manifest query fingerprint does not match query")
+    if manifest.collection_snapshot is None:
+        if manifest.collection_fingerprint is not None:
+            raise ManifestIntegrityError(
+                "manifest has a Collection fingerprint without a Collection snapshot"
+            )
+    else:
+        expected_collection_fingerprint = canonical_fingerprint(
+            manifest.collection_snapshot
+        )
+        if manifest.collection_fingerprint != expected_collection_fingerprint:
+            raise ManifestIntegrityError(
+                "manifest Collection fingerprint does not match Collection snapshot"
+            )
+    return manifest
