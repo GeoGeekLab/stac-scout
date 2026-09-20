@@ -10,6 +10,7 @@ from rich.console import Console
 
 from stac_scout import __version__
 from stac_scout.catalogs import CatalogAdapter, GenericStacAdapter, build_adapter, inspect_catalog
+from stac_scout.constraints import ConstraintViolationError
 from stac_scout.federation import FederatedScout
 from stac_scout.health import check_providers
 from stac_scout.models import (
@@ -42,6 +43,16 @@ def _print_json(value: Any) -> None:
         console.print_json(value.model_dump_json(indent=2))
         return
     console.print_json(json.dumps(value, indent=2, default=str))
+
+
+def _constraint_violation(exc: ConstraintViolationError) -> None:
+    _print_json(
+        {
+            "error": str(exc),
+            "constraints": [check.model_dump(mode="json") for check in exc.checks],
+        }
+    )
+    raise typer.Exit(code=2)
 
 
 def _provider(key: str, *, catalog_url: str | None = None) -> ProviderSpec:
@@ -287,11 +298,14 @@ def verify(
     max_items: Annotated[int, typer.Option(min=1, max=10_000)] = 100,
 ) -> None:
     request = _load_request(request_path)
-    _, probe = ScoutEngine(_resolve_adapter(catalog, provider)).verify(
-        request,
-        collection,
-        max_items=max_items,
-    )
+    try:
+        _, probe = ScoutEngine(_resolve_adapter(catalog, provider)).verify(
+            request,
+            collection,
+            max_items=max_items,
+        )
+    except ConstraintViolationError as exc:
+        _constraint_violation(exc)
     _print_json(probe)
 
 
@@ -306,11 +320,14 @@ def plan(
     max_items: Annotated[int, typer.Option(min=1, max=10_000)] = 100,
 ) -> None:
     request = _load_request(request_path)
-    result = ScoutEngine(_resolve_adapter(catalog, provider)).plan(
-        request,
-        collection,
-        max_items=max_items,
-    )
+    try:
+        result = ScoutEngine(_resolve_adapter(catalog, provider)).plan(
+            request,
+            collection,
+            max_items=max_items,
+        )
+    except ConstraintViolationError as exc:
+        _constraint_violation(exc)
     if manifest_path is not None:
         write_manifest(result.manifest, manifest_path)
     if recipe_path is not None:
