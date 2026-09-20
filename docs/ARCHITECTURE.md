@@ -105,7 +105,8 @@ Asset selection ranks explicit evidence: source-resolution fit, presence across 
 Source and output resolution are separate contracts:
 
 - `max_source_resolution_m` is a hard suitability constraint on source data;
-- `target_resolution_m` is an explicit requested output grid resolution;
+- `target_crs` is the explicit output CRS;
+- `target_resolution_m` is an explicit meter-based output grid resolution and therefore requires a projected meter CRS or the odc-stac `"utm"` selector;
 - the legacy input key `max_spatial_resolution_m` is accepted only as an alias for `max_source_resolution_m`;
 - a source-resolution threshold is never reused as output resolution.
 
