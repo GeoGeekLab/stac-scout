@@ -36,6 +36,7 @@ class AssetChoice(BaseModel):
     selection_reason: str
     gsd_m: float | None = Field(default=None, gt=0)
     gsd_complete: bool = False
+    item_coverage_complete: bool = False
     resampling: str | None = None
     resampling_basis: str | None = None
 
