@@ -414,7 +414,10 @@ It is an estimate, not a bandwidth prophecy.
 
 A successful query today is not a frozen scientific record.
 
-Scout writes a manifest containing the decision inputs and observed Item set.
+Scout writes a versioned provenance manifest containing the canonical request/query,
+provider/catalog identity, search limit and completeness, Collection fingerprint, full access
+plan, selected-asset metadata, and the observed decision-matching Item set. Ephemeral asset URLs
+are not copied into the provenance snapshot.
 
 Replay it later:
 
@@ -422,13 +425,24 @@ Replay it later:
 stac-scout replay scout.manifest.json
 ```
 
+By default replay reuses the manifest's recorded `max_items`. You can override it explicitly,
+but Scout records that the limits differ.
+
 Replay reports:
 
 ```text
+comparison status: complete / partial / inconclusive
 retained Item IDs
-missing Item IDs
-new Item IDs
+confirmed missing Item IDs
+confirmed new Item IDs
+unresolved missing Item IDs
+unresolved new Item IDs
+Collection metadata changed: true / false / unknown
 ```
+
+A search that returns exactly `max_items` is marked `limit_reached`, not assumed complete or
+definitely truncated. If either historical or current completeness cannot be proven, Scout will
+not promote ordering/sample differences into confirmed drift.
 
 The manifest is evidence of the decision.
 
