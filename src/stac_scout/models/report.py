@@ -74,4 +74,3 @@ class DecisionReport(BaseModel):
     alternatives: tuple[CandidateAssessment, ...] = ()
     access_plan: AccessPlan | None = None
     generated_at: datetime
-
