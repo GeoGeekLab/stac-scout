@@ -5,7 +5,7 @@ import json
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from stac_scout import __version__
 from stac_scout.models import (
@@ -23,7 +23,7 @@ from stac_scout.models import (
 )
 from stac_scout.normalize.assets import normalize_asset
 
-MANIFEST_SCHEMA_VERSION = 1
+MANIFEST_SCHEMA_VERSION: Literal[1] = 1
 
 
 def _collection_snapshot(card: DatasetCard) -> CollectionSnapshot:
