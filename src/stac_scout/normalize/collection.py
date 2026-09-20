@@ -26,21 +26,22 @@ def _spatial_extent(raw: dict[str, Any]) -> tuple[float, float, float, float] | 
     if not isinstance(spatial, dict):
         return None
     boxes = spatial.get("bbox")
+    if boxes is None:
+        return None
     if not isinstance(boxes, list):
+        raise ValueError("Collection spatial bbox metadata must be a list")
+    if not boxes:
         return None
 
     valid_boxes: list[tuple[float, float, float, float]] = []
     for box in boxes:
         if not isinstance(box, list) or len(box) < 4:
-            continue
+            raise ValueError("Collection spatial bbox entry must contain four coordinates")
         values = box[:4]
         if any(not isinstance(value, (int, float)) or isinstance(value, bool) for value in values):
-            continue
+            raise ValueError("Collection spatial bbox coordinates must be numeric")
         west, south, east, north = (float(value) for value in values)
         valid_boxes.append((west, south, east, north))
-
-    if not valid_boxes:
-        return None
 
     return (
         min(box[0] for box in valid_boxes),
