@@ -156,7 +156,7 @@ class ScoutEngine:
         capped = bool(raw_items) and len(raw_items) >= max_items
         if request.max_cloud_cover is not None and capped:
             warnings.append(
-                "cloud-cover filtering was evaluated after a capped Item search; "
+                "cloud-cover filtering was evaluated after the Item search reached its cap; "
                 "additional matching Items may exist"
             )
             item_summary = tuple(
