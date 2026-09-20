@@ -47,9 +47,7 @@ def test_normalize_collection_detects_sar_extension() -> None:
     card = normalize_collection(
         {
             "id": "sar-test",
-            "stac_extensions": [
-                "https://stac-extensions.github.io/sar/v1.0.0/schema.json"
-            ],
+            "stac_extensions": ["https://stac-extensions.github.io/sar/v1.0.0/schema.json"],
             "extent": {
                 "spatial": {"bbox": [[-180, -90, 180, 90]]},
                 "temporal": {"interval": [[None, None]]},
