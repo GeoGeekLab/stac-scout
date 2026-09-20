@@ -1,6 +1,12 @@
 from __future__ import annotations
 
-from stac_scout.models import AvailabilityProbe, ItemEvidence, ScoutRequest, VerificationStatus
+from stac_scout.models import (
+    AvailabilityProbe,
+    ConstraintStatus,
+    ItemEvidence,
+    ScoutRequest,
+    VerificationStatus,
+)
 from stac_scout.planning import build_access_plan, estimate_asset_bytes, select_asset_keys
 
 
@@ -50,6 +56,50 @@ def test_build_access_plan(scout_request: ScoutRequest, aoi: dict[str, object]) 
     assert plan.assets == ("B04", "B08")
     assert plan.estimated_bytes == 1500
     assert plan.resampling == {"red": "bilinear", "nir": "bilinear"}
+    assert plan.constraints == ()
+
+
+def test_build_access_plan_evaluates_volume_budget(
+    scout_request: ScoutRequest,
+    aoi: dict[str, object],
+) -> None:
+    request = scout_request.model_copy(update={"max_data_volume_bytes": 1000})
+    probe = AvailabilityProbe(
+        status=VerificationStatus.VERIFIED_AVAILABLE,
+        items_checked=1,
+        items=(ItemEvidence(item_id="scene-1", item_fraction_read=0.5),),
+    )
+
+    plan, _ = build_access_plan(request, _items(aoi), probe)
+
+    assert plan.estimated_bytes == 1500
+    assert plan.constraints[0].name == "data_volume_bytes"
+    assert plan.constraints[0].status is ConstraintStatus.FAIL
+
+
+def test_build_access_plan_preserves_unknown_volume_budget(
+    scout_request: ScoutRequest,
+) -> None:
+    request = scout_request.model_copy(update={"max_data_volume_bytes": 1000})
+    items = [
+        {
+            "id": "scene-1",
+            "assets": {
+                "B04": {"eo:bands": [{"common_name": "red"}]},
+                "B08": {"eo:bands": [{"common_name": "nir"}]},
+            },
+        }
+    ]
+    probe = AvailabilityProbe(
+        status=VerificationStatus.VERIFIED_AVAILABLE,
+        items_checked=1,
+        items=(ItemEvidence(item_id="scene-1"),),
+    )
+
+    plan, _ = build_access_plan(request, items, probe)
+
+    assert plan.estimated_bytes is None
+    assert plan.constraints[0].status is ConstraintStatus.UNKNOWN
 
 
 def test_plan_reports_unresolved_measurement(

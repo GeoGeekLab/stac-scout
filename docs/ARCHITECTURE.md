@@ -39,11 +39,44 @@ The Planetary Computer adapter records signing requirements while generated reci
 
 Provider metadata is normalized into stable internal models. Constraint evaluation uses three states:
 
-- `pass`: metadata satisfies the requirement
-- `fail`: metadata contradicts the requirement
-- `unknown`: metadata is insufficient
+- `pass`: evidence satisfies the requirement
+- `fail`: evidence contradicts the requirement
+- `unknown`: the current evidence layer cannot establish the requirement
 
 Unknown is intentionally distinct from failure.
+
+Hard constraints are evaluated in stages rather than being treated as one flat filter:
+
+```text
+Collection evidence
+  data_type / measurements / source resolution
+        |
+        | FAIL -> reject before ranking
+        v
+Item evidence
+  cloud cover and other scene-level facts
+        |
+        | known FAIL -> exclude Item
+        v
+Planning evidence
+  selected assets / estimated transfer volume
+        |
+        | FAIL -> refuse executable plan/manifest
+        v
+PASS or explicitly unresolved UNKNOWN
+```
+
+A later stage refines an earlier `unknown` for the same constraint. For example,
+`max_cloud_cover` is unknown at Collection discovery and is evaluated against
+`eo:cloud_cover` when Items are inspected. `max_data_volume_bytes` remains unknown
+until assets are selected and their transfer size can be estimated.
+
+The `access` request constraint is currently kept explicitly `unknown` when normalized
+dataset/asset metadata does not provide enough evidence to distinguish the requested access
+policy. Provider endpoint accessibility is not treated as proof that dataset assets satisfy an
+open/free-data requirement.
+
+Preferences are not hard constraints and do not override a hard-constraint failure.
 
 ## Verification
 

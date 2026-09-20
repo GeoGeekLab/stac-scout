@@ -4,6 +4,7 @@ from datetime import datetime as DateTime
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from .dataset import ConstraintCheck
 from .report import VerificationStatus
 
 
@@ -25,4 +26,5 @@ class AvailabilityProbe(BaseModel):
     items_checked: int = Field(ge=0)
     max_coverage_ratio: float | None = Field(default=None, ge=0, le=1)
     items: tuple[ItemEvidence, ...] = ()
+    constraints: tuple[ConstraintCheck, ...] = ()
     warnings: tuple[str, ...] = ()

@@ -1,10 +1,13 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import StrEnum
+from math import isfinite
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from shapely.errors import GEOSException
+from shapely.geometry import shape
 
 
 class DataType(StrEnum):
@@ -30,6 +33,13 @@ class TimeRange(BaseModel):
     start: datetime
     end: datetime
 
+    @field_validator("start", "end")
+    @classmethod
+    def require_timezone(cls, value: datetime) -> datetime:
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("datetime values must be timezone-aware")
+        return value.astimezone(UTC)
+
     @model_validator(mode="after")
     def validate_order(self) -> TimeRange:
         if self.end < self.start:
@@ -42,7 +52,7 @@ class ScoutRequest(BaseModel):
 
     task: str = Field(min_length=1)
     geometry: dict[str, Any] | None = None
-    place: str | None = None
+    place: str | None = Field(default=None, min_length=1)
     datetime: TimeRange
     data_type: DataType = DataType.ANY
     required_measurements: tuple[str, ...] = ()
@@ -51,6 +61,50 @@ class ScoutRequest(BaseModel):
     access: AccessPolicy = AccessPolicy.ANY
     max_data_volume_bytes: int | None = Field(default=None, gt=0)
     preferences: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("geometry")
+    @classmethod
+    def validate_geometry(cls, value: dict[str, Any] | None) -> dict[str, Any] | None:
+        if value is None:
+            return None
+
+        geometry_type = value.get("type")
+        if geometry_type not in {"Polygon", "MultiPolygon"}:
+            raise ValueError("geometry must be a GeoJSON Polygon or MultiPolygon")
+
+        try:
+            geometry = shape(value)
+        except (GEOSException, KeyError, TypeError, ValueError) as exc:
+            raise ValueError("geometry is not valid GeoJSON") from exc
+
+        if geometry.is_empty:
+            raise ValueError("geometry must not be empty")
+        if not geometry.is_valid:
+            raise ValueError("geometry must be topologically valid")
+
+        west, south, east, north = geometry.bounds
+        if not all(isfinite(value) for value in (west, south, east, north)):
+            raise ValueError("geometry coordinates must be finite")
+        if west < -180 or east > 180 or south < -90 or north > 90:
+            raise ValueError("geometry coordinates must use WGS84 longitude/latitude bounds")
+
+        return value
+
+    @field_validator("required_measurements")
+    @classmethod
+    def normalize_measurements(cls, values: tuple[str, ...]) -> tuple[str, ...]:
+        normalized: list[str] = []
+        seen: set[str] = set()
+        for value in values:
+            measurement = value.strip()
+            if not measurement:
+                raise ValueError("required measurements must not be empty")
+            key = measurement.casefold()
+            if key in seen:
+                continue
+            normalized.append(measurement)
+            seen.add(key)
+        return tuple(normalized)
 
     @model_validator(mode="after")
     def validate_location(self) -> ScoutRequest:
