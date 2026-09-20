@@ -253,6 +253,5 @@ def test_from_registry_applies_one_network_policy_to_all_adapters() -> None:
 
     assert set(scout.adapters) == {"earth-search", "planetary-computer"}
     assert all(
-        getattr(adapter, "network_policy", None) is policy
-        for adapter in scout.adapters.values()
+        getattr(adapter, "network_policy", None) is policy for adapter in scout.adapters.values()
     )
