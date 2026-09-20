@@ -333,8 +333,9 @@ def evaluate_plan_constraints(
 
         if failed:
             status = ConstraintStatus.FAIL
-            reason = "selected asset exceeds the requested source-resolution maximum for: " + ", ".join(
-                failed
+            reason = (
+                "selected asset exceeds the requested source-resolution maximum for: "
+                + ", ".join(failed)
             )
         elif missing_measurements or ambiguous_measurements:
             status = ConstraintStatus.UNKNOWN
