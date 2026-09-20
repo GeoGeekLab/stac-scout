@@ -1,0 +1,81 @@
+name: Correctness report
+description: Report a scientifically or semantically incorrect dataset decision.
+title: "[correctness] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form when STAC Scout runs successfully but the decision, evidence, geometry, measurement, asset, or replay result is wrong or misleading.
+        Do not include secrets, credentials, or signed URLs.
+
+  - type: textarea
+    id: scenario
+    attributes:
+      label: Scenario
+      description: What task/request/catalog/provider were you evaluating?
+      placeholder: Include the smallest reproducible request and relevant catalog/collection/item identifiers.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Correctness area
+      options:
+        - Request/constraint semantics
+        - Task-derived modality or measurements
+        - Candidate ranking/filtering
+        - Geometry/AOI coverage
+        - Resolution/GSD
+        - Asset selection
+        - Resampling
+        - Provider/federation behavior
+        - Manifest/replay
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed behavior
+      description: What did STAC Scout report or select?
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: State the expected PASS/FAIL/UNKNOWN or evidence-backed behavior and why.
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Provide relevant STAC metadata, standards, authoritative sources, or a minimal fixture. Redact credentials and expiring signed URLs.
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: |
+        stac-scout version:
+        Python version:
+        OS:
+        provider/catalog:
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I removed secrets, credentials, tokens, and signed URLs.
+          required: true
+        - label: I searched existing issues for the same correctness problem.
+          required: true
