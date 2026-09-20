@@ -91,7 +91,11 @@ def evaluate_constraints(card: DatasetCard, request: ScoutRequest) -> tuple[Cons
                 observed_by_measurement[measurement] = gsds or None
                 if not gsds:
                     unknown.append(measurement)
-                elif min(gsds) > request.max_source_resolution_m:
+                elif min(gsds) <= request.max_source_resolution_m:
+                    continue
+                elif any(asset.gsd_m is None for asset in assets):
+                    unknown.append(measurement)
+                else:
                     failed.append(measurement)
 
             if failed:
@@ -318,8 +322,7 @@ def evaluate_plan_constraints(
         failed = tuple(
             choice.measurement
             for choice in asset_choices
-            if choice.gsd_complete
-            and choice.gsd_m is not None
+            if choice.gsd_m is not None
             and choice.gsd_m > request.max_source_resolution_m
         )
         unknown = tuple(
