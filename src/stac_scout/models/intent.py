@@ -23,6 +23,7 @@ class IntentDraft(BaseModel):
     data_type: DataType = DataType.ANY
     required_measurements: tuple[str, ...] = ()
     max_source_resolution_m: float | None = Field(default=None, gt=0)
+    target_crs: str | None = Field(default=None, min_length=1)
     target_resolution_m: float | None = Field(default=None, gt=0)
     max_cloud_cover: float | None = Field(default=None, ge=0, le=100)
     access: AccessPolicy = AccessPolicy.ANY
@@ -66,6 +67,7 @@ class IntentDraft(BaseModel):
             data_type=self.data_type,
             required_measurements=self.required_measurements,
             max_source_resolution_m=self.max_source_resolution_m,
+            target_crs=self.target_crs,
             target_resolution_m=self.target_resolution_m,
             max_cloud_cover=self.max_cloud_cover,
             access=self.access,
