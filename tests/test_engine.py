@@ -60,9 +60,7 @@ class ModalityAdapter(Adapter):
             {
                 "id": "sar-high-text-score",
                 "description": "optical vegetation red nir analysis",
-                "stac_extensions": [
-                    "https://stac-extensions.github.io/sar/v1.0.0/schema.json"
-                ],
+                "stac_extensions": ["https://stac-extensions.github.io/sar/v1.0.0/schema.json"],
                 "extent": {
                     "spatial": {"bbox": [[-180, -90, 180, 90]]},
                     "temporal": {"interval": [[None, None]]},
@@ -73,9 +71,7 @@ class ModalityAdapter(Adapter):
             {
                 "id": "optical",
                 "description": "surface reflectance",
-                "stac_extensions": [
-                    "https://stac-extensions.github.io/eo/v1.1.0/schema.json"
-                ],
+                "stac_extensions": ["https://stac-extensions.github.io/eo/v1.1.0/schema.json"],
                 "extent": {
                     "spatial": {"bbox": [[-180, -90, 180, 90]]},
                     "temporal": {"interval": [[None, None]]},
