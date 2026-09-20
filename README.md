@@ -292,6 +292,10 @@ Planetary Computer signing is recorded explicitly and generated recipes use the 
 
 Provider latency and uptime are reported as operational evidence only.
 
+Network behavior is bounded: adapters use explicit connect/read timeouts, a finite transient-retry
+budget, capped backoff/Retry-After delays, and typed provider errors. A reachable provider with
+invalid metadata is reported as degraded rather than falsely labeled unreachable.
+
 A slow endpoint does not make a scientifically suitable dataset worse.
 
 ## Federation without pretending everything is the same
@@ -313,7 +317,13 @@ Search across enabled providers:
 
 ```bash
 stac-scout federate request.json
+stac-scout federate request.json --max-workers 4 --overall-timeout 30
 ```
+
+Federation isolates expected provider failures such as timeouts, rate limits, authentication
+errors, malformed metadata, and unsupported capabilities. Each failure reports its type, HTTP
+status when known, and whether retry is reasonable. Unexpected internal exceptions are not
+converted into provider failures.
 
 Dataset identity is conservative:
 
