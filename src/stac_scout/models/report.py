@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .catalog import CatalogCapabilities
 from .dataset import BandInfo, ConstraintCheck
@@ -71,6 +71,22 @@ class SearchObservation(BaseModel):
     completeness: SearchCompleteness
     pagination_mode: str = "provider-managed"
     ordering: str = "provider-default"
+
+    @model_validator(mode="after")
+    def validate_counts(self) -> SearchObservation:
+        if self.accepted_items > self.returned_items:
+            raise ValueError("accepted_items must not exceed returned_items")
+        if self.completeness is SearchCompleteness.COMPLETE and self.max_items is not None:
+            if self.returned_items >= self.max_items:
+                raise ValueError(
+                    "complete search must return fewer Items than the recorded max_items"
+                )
+        if self.completeness is SearchCompleteness.LIMIT_REACHED:
+            if self.max_items is None or self.returned_items != self.max_items:
+                raise ValueError(
+                    "limit_reached search must return exactly the recorded max_items"
+                )
+        return self
 
 
 class CollectionSnapshot(BaseModel):
