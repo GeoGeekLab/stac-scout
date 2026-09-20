@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 
 import httpx
 
+from stac_scout.catalogs import ProviderNetworkPolicy
 from stac_scout.health import check_provider
 from stac_scout.models import ProviderHealthStatus, ProviderSpec
 
@@ -40,6 +41,7 @@ def test_health_reports_healthy_item_search() -> None:
     assert result.status is ProviderHealthStatus.HEALTHY
     assert result.latency_ms == 125.0
     assert result.item_search is True
+    assert result.error_type is None
 
 
 def test_health_reports_degraded_without_item_search() -> None:
@@ -54,13 +56,48 @@ def test_health_reports_degraded_without_item_search() -> None:
     assert result.item_search is False
 
 
-def test_health_reports_unreachable() -> None:
+def test_health_reports_network_failure_as_unreachable() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         raise httpx.ConnectError("offline", request=request)
 
     with httpx.Client(transport=httpx.MockTransport(handler)) as client:
-        result = check_provider(_provider(), client=client)
+        result = check_provider(
+            _provider(),
+            client=client,
+            network_policy=ProviderNetworkPolicy(max_retries=0),
+        )
 
     assert result.status is ProviderHealthStatus.UNREACHABLE
-    assert result.error_type == "ConnectError"
+    assert result.error_type == "ProviderNetworkError"
     assert result.error == "offline"
+    assert result.retryable is True
+
+
+def test_health_reports_malformed_metadata_as_degraded() -> None:
+    with httpx.Client(
+        transport=httpx.MockTransport(lambda request: httpx.Response(200, json=[]))
+    ) as client:
+        result = check_provider(
+            _provider(),
+            client=client,
+            network_policy=ProviderNetworkPolicy(max_retries=0),
+        )
+
+    assert result.status is ProviderHealthStatus.DEGRADED
+    assert result.error_type == "ProviderMetadataError"
+    assert result.retryable is False
+
+
+def test_health_reports_authentication_failure_as_degraded() -> None:
+    transport = httpx.MockTransport(lambda request: httpx.Response(401))
+    with httpx.Client(transport=transport) as client:
+        result = check_provider(
+            _provider(),
+            client=client,
+            network_policy=ProviderNetworkPolicy(max_retries=0),
+        )
+
+    assert result.status is ProviderHealthStatus.DEGRADED
+    assert result.error_type == "ProviderAuthenticationError"
+    assert result.status_code == 401
+    assert result.retryable is False

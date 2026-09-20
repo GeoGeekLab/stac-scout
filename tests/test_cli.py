@@ -110,3 +110,12 @@ def test_discover_rejects_unknown_provider(tmp_path: Path) -> None:
 
     assert result.exit_code != 0
     assert "unknown provider" in result.output
+
+
+def test_federate_cli_exposes_execution_controls() -> None:
+    root = typer.main.get_command(app)
+    command = root.get_command(None, "federate")
+
+    assert command is not None
+    parameter_names = {parameter.name for parameter in command.params}
+    assert {"max_workers", "overall_timeout"} <= parameter_names
