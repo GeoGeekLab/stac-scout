@@ -1,0 +1,24 @@
+{
+  "task": "assess wildfire impact around Lahaina after the August 2023 fire",
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [-156.72, 20.84],
+        [-156.64, 20.84],
+        [-156.64, 20.93],
+        [-156.72, 20.93],
+        [-156.72, 20.84]
+      ]
+    ]
+  },
+  "datetime": {
+    "start": "2023-08-09T00:00:00Z",
+    "end": "2023-08-20T23:59:59Z"
+  },
+  "data_type": "optical",
+  "required_measurements": ["nir", "swir22"],
+  "max_source_resolution_m": 20,
+  "target_crs": "utm",
+  "target_resolution_m": 20
+}
