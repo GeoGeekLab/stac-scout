@@ -39,3 +39,19 @@ def test_local_identity_keeps_catalogs_distinct() -> None:
 
     assert dataset_identity(first).key != dataset_identity(second).key
     assert dataset_identity(first).strength is IdentityStrength.LOCAL
+
+
+def test_invalid_doi_does_not_create_exact_identity() -> None:
+    card = DatasetCard(
+        catalog_url="https://a.test/stac",
+        collection_id="sentinel-2-l2a",
+        doi="not-a-doi",
+        platforms=("sentinel-2a", "sentinel-2b"),
+        instruments=("msi",),
+    )
+
+    identity = dataset_identity(card)
+
+    assert identity.strength is IdentityStrength.PROBABLE
+    assert identity.key.startswith("semantic:")
+    assert "sci:doi" not in identity.basis
