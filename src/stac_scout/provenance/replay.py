@@ -118,9 +118,7 @@ def replay_manifest(
             max_items=effective_max_items,
         )
     )
-    checks_by_item = [
-        evaluate_item_constraints(item, manifest.request) for item in raw_items
-    ]
+    checks_by_item = [evaluate_item_constraints(item, manifest.request) for item in raw_items]
     items = [
         item
         for item, checks in zip(raw_items, checks_by_item, strict=True)
