@@ -4,13 +4,20 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from stac_scout.models import AssetChoice
-from stac_scout.normalize.bands import band_definitions
-
 _MATCH_RANK = {
     "band_name": 1,
     "common_name": 2,
     "asset_key": 3,
 }
+
+
+def _all_band_definitions(asset: dict[str, Any]) -> tuple[dict[str, Any], ...]:
+    bands: list[dict[str, Any]] = []
+    for key in ("bands", "eo:bands", "raster:bands"):
+        value = asset.get(key)
+        if isinstance(value, list):
+            bands.extend(entry for entry in value if isinstance(entry, dict))
+    return tuple(bands)
 
 
 @dataclass(slots=True)
@@ -42,7 +49,7 @@ def _measurement_match(
     if key.casefold() == target:
         best = (_MATCH_RANK["asset_key"], "asset_key")
 
-    for band in band_definitions(asset):
+    for band in _all_band_definitions(asset):
         common_name = band.get("common_name")
         if isinstance(common_name, str) and common_name.casefold() == target:
             candidate = (_MATCH_RANK["common_name"], "common_name")
