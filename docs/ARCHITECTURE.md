@@ -133,7 +133,17 @@ Source and output resolution are separate contracts:
 
 Resampling is also evidence-driven. Classification metadata and mask/quality roles select nearest-neighbor; known continuous measurement semantics select bilinear. Unknown semantics remain unresolved instead of silently defaulting to bilinear.
 
-A manifest records request, provider, collection, item IDs, selected assets, signing strategy, query, warnings, and Scout version. Replay performs a fresh search and reports item-set drift.
+Manifest schema v1 records the canonical request/query, provider/catalog identity, observed catalog capabilities, decision-relevant Collection metadata, a Collection fingerprint, search limit/completeness, the full access plan, selected-asset metadata, Item IDs, signing strategy, warnings, and Scout version. Ephemeral asset hrefs are deliberately excluded from the asset metadata snapshot.
+
+Search completeness is conservative:
+
+- `complete`: the provider iterator exhausted before `max_items`;
+- `limit_reached`: exactly `max_items` were observed, so completeness cannot be proven;
+- `unknown`: the historical observation did not record enough information or the provider violated the requested bound.
+
+Replay compares the decision-matching Item set directionally. A previously observed Item is only reported as confirmed missing when the current search is complete. A currently observed Item is only reported as confirmed new when the historical search was complete. Otherwise the difference is reported under `unresolved_*`, preventing provider ordering or truncation artifacts from becoming false drift.
+
+Unversioned legacy manifests are migrated in memory to schema v1 with historical completeness set to `unknown`. Future schema versions are rejected until an explicit migration is implemented.
 
 ## Dependency direction
 
