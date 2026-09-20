@@ -340,10 +340,8 @@ class ScoutEngine:
         try:
             catalog_capabilities = self.adapter.inspect()
         except ProviderError as exc:
-            manifest_warnings.append(
-                "catalog capabilities were not captured: "
-                f"{type(exc).__name__}: {exc}"
-            )
+            warning_prefix = "catalog capabilities were not captured"
+            manifest_warnings.append(f"{warning_prefix}: {type(exc).__name__}: {exc}")
 
         manifest = build_manifest(
             request,
