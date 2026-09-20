@@ -10,7 +10,7 @@ from shapely.errors import GEOSException
 from shapely.geometry import MultiPolygon, Polygon, shape
 from shapely.geometry.base import BaseGeometry
 from shapely.geometry.polygon import orient
-from shapely.ops import transform
+from shapely.ops import transform, unary_union
 
 _GEOD = Geod(ellps="WGS84")
 _CRS84 = CRS.from_user_input("OGC:CRS84")
@@ -142,10 +142,12 @@ def _unwrap_longitudes(
         )
 
     if isinstance(geometry, Polygon):
-        result: Polygon | MultiPolygon = unwrap_polygon(geometry)
+        result: BaseGeometry = unwrap_polygon(geometry)
     else:
-        result = MultiPolygon([unwrap_polygon(polygon) for polygon in geometry.geoms])
+        result = unary_union([unwrap_polygon(polygon) for polygon in geometry.geoms])
 
+    if not isinstance(result, (Polygon, MultiPolygon)):
+        raise ValueError("coverage geometry must remain areal after longitude normalization")
     if result.is_empty or not result.is_valid:
         raise ValueError("coverage geometry became invalid after longitude normalization")
     return result
@@ -213,6 +215,14 @@ def coverage_metrics(
     if aoi_area <= 0 or item_area <= 0:
         raise ValueError("coverage geometries must have non-zero projected area")
 
-    coverage = max(0.0, min(1.0, intersection_area / aoi_area))
-    item_fraction = max(0.0, min(1.0, intersection_area / item_area))
+    coverage = (
+        1.0
+        if intersection.equals(normalized_aoi)
+        else max(0.0, min(1.0, intersection_area / aoi_area))
+    )
+    item_fraction = (
+        1.0
+        if intersection.equals(normalized_item)
+        else max(0.0, min(1.0, intersection_area / item_area))
+    )
     return coverage, item_fraction
