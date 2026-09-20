@@ -59,10 +59,7 @@ class Manifest(BaseModel):
         if self.query.intersects != self.request.geometry:
             raise ValueError("manifest query geometry does not match request geometry")
 
-        expected_datetime = (
-            f"{self.request.datetime.start.isoformat()}/"
-            f"{self.request.datetime.end.isoformat()}"
-        )
+        expected_datetime = f"{self.request.datetime.start.isoformat()}/{self.request.datetime.end.isoformat()}"
         if self.query.datetime != expected_datetime:
             raise ValueError("manifest query datetime does not match request datetime")
         if self.observation.max_items != self.query.max_items:
