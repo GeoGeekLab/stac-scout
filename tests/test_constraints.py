@@ -64,9 +64,7 @@ def test_constraints_enforce_declared_data_type(scout_request: ScoutRequest) -> 
         spatial_resolution_m=10,
         bands=(BandInfo(common_name="red"), BandInfo(common_name="nir")),
     )
-    optical = sar.model_copy(
-        update={"collection_id": "optical", "data_type": DataType.OPTICAL}
-    )
+    optical = sar.model_copy(update={"collection_id": "optical", "data_type": DataType.OPTICAL})
 
     assert evaluate_constraints(sar, request)[0].status is ConstraintStatus.PASS
     assert evaluate_constraints(optical, request)[0].status is ConstraintStatus.FAIL
