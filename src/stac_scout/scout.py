@@ -4,7 +4,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 
-from stac_scout.catalogs import CatalogAdapter, ProviderMetadataError
+from stac_scout.catalogs import CatalogAdapter, ProviderError, ProviderMetadataError
 from stac_scout.constraints import (
     ConstraintViolationError,
     evaluate_constraints,
@@ -17,11 +17,14 @@ from stac_scout.models import (
     AccessPlan,
     AssetSigning,
     AvailabilityProbe,
+    CatalogCapabilities,
     ConstraintCheck,
     ConstraintStatus,
     DatasetCard,
     Manifest,
     ScoutRequest,
+    SearchCompleteness,
+    SearchObservation,
     VerificationStatus,
 )
 from stac_scout.normalize import normalize_collection
@@ -74,6 +77,20 @@ def _merge_constraint_checks(
     return tuple(merged)
 
 
+def _capability_snapshot(
+    adapter: CatalogAdapter,
+) -> tuple[CatalogCapabilities | None, str | None]:
+    try:
+        return adapter.inspect(), None
+    except NotImplementedError:
+        return None, "catalog capability snapshot is unavailable for this adapter"
+    except ProviderError as exc:
+        return (
+            None,
+            f"catalog capability snapshot failed with {type(exc).__name__}: {exc}",
+        )
+
+
 class ScoutEngine:
     def __init__(self, adapter: CatalogAdapter) -> None:
         self.adapter = adapter
@@ -121,13 +138,15 @@ class ScoutEngine:
             for entry in ranked[:limit]
         ]
 
-    def verify(
+    def _verify_with_collection(
         self,
         request: ScoutRequest,
         collection_id: str,
         *,
-        max_items: int = 100,
-    ) -> tuple[list[dict[str, Any]], AvailabilityProbe]:
+        max_items: int,
+    ) -> tuple[list[dict[str, Any]], AvailabilityProbe, DatasetCard]:
+        if max_items < 1:
+            raise ValueError("max_items must be at least 1")
         if request.geometry is None:
             raise ValueError("request geometry is required for live verification")
 
@@ -155,6 +174,11 @@ class ScoutEngine:
             if not has_failed_constraint(checks)
         ]
 
+        search = SearchObservation.from_counts(
+            max_items=max_items,
+            items_observed=len(raw_items),
+            items_retained=len(items),
+        )
         item_summary = summarize_item_constraints(checks_by_item, request)
         warnings: list[str] = []
         failed_items = sum(has_failed_constraint(checks) for checks in checks_by_item)
@@ -174,12 +198,14 @@ class ScoutEngine:
             warnings.append(
                 f"{unknown_cloud_items} Item(s) have unknown cloud cover and remain unresolved"
             )
+        if search.completeness is SearchCompleteness.CAPPED and search.reason is not None:
+            warnings.append(search.reason)
 
-        capped = bool(raw_items) and len(raw_items) >= max_items
+        capped = search.completeness is SearchCompleteness.CAPPED
         if request.max_cloud_cover is not None and capped:
             warnings.append(
                 "cloud-cover filtering was evaluated after the Item search reached its cap; "
-                "additional matching Items may exist"
+                "additional qualifying Items may exist"
             )
             item_summary = tuple(
                 check.model_copy(
@@ -197,7 +223,7 @@ class ScoutEngine:
             )
 
         constraints = _merge_constraint_checks(collection_checks, item_summary)
-        probe = probe_items(items, request.geometry)
+        probe = probe_items(items, request.geometry, search=search)
         status = probe.status
         if (
             not items
@@ -214,6 +240,20 @@ class ScoutEngine:
                 "warnings": tuple(dict.fromkeys((*probe.warnings, *warnings))),
             }
         )
+        return items, probe, collection
+
+    def verify(
+        self,
+        request: ScoutRequest,
+        collection_id: str,
+        *,
+        max_items: int = 100,
+    ) -> tuple[list[dict[str, Any]], AvailabilityProbe]:
+        items, probe, _ = self._verify_with_collection(
+            request,
+            collection_id,
+            max_items=max_items,
+        )
         return items, probe
 
     def plan(
@@ -224,7 +264,11 @@ class ScoutEngine:
         max_items: int = 100,
         output_crs: str | None = None,
     ) -> PlannedDataset:
-        items, probe = self.verify(request, collection_id, max_items=max_items)
+        items, probe, collection = self._verify_with_collection(
+            request,
+            collection_id,
+            max_items=max_items,
+        )
 
         verification_failures = tuple(
             check for check in probe.constraints if check.status is ConstraintStatus.FAIL
@@ -271,14 +315,20 @@ class ScoutEngine:
         if not isinstance(asset_signing, AssetSigning):
             asset_signing = AssetSigning.NONE
 
+        capabilities, capability_warning = _capability_snapshot(self.adapter)
+        extra_warnings = (capability_warning,) if capability_warning is not None else ()
         manifest = build_manifest(
             request,
             catalog_url=self.adapter.catalog_url,
             collection_id=collection_id,
             provider_key=provider_key,
+            adapter_type=type(self.adapter).__name__,
             asset_signing=asset_signing,
+            catalog_capabilities=capabilities,
+            collection_snapshot=collection,
             probe=probe,
             access_plan=access_plan,
+            extra_warnings=extra_warnings,
         )
         return PlannedDataset(
             probe=probe,

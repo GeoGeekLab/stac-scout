@@ -414,7 +414,9 @@ It is an estimate, not a bandwidth prophecy.
 
 A successful query today is not a frozen scientific record.
 
-Scout writes a manifest containing the decision inputs and observed Item set.
+Scout writes a schema-versioned manifest containing the request, canonical request/query
+fingerprints, provider/catalog evidence, normalized Collection snapshot, Item Search completeness,
+retained Item evidence, and the full access plan.
 
 Replay it later:
 
@@ -422,17 +424,27 @@ Replay it later:
 stac-scout replay scout.manifest.json
 ```
 
-Replay reports:
+By default replay reuses the Item Search limit recorded in the manifest. It separates differences
+that can be proven from differences that are only artifacts of incomplete observations:
 
 ```text
 retained Item IDs
-missing Item IDs
-new Item IDs
+confirmed missing Item IDs
+confirmed new Item IDs
+unresolved missing Item IDs
+unresolved new Item IDs
+comparison_complete
 ```
+
+If either side hit its result cap, Scout does not pretend that an ordering change proves catalog
+drift. Unversioned pre-v0.5 manifests remain readable, but their historical completeness is
+explicitly migrated as `unknown`.
+
+See [`docs/MANIFEST.md`](docs/MANIFEST.md) for the schema, compatibility, and replay contract.
 
 The manifest is evidence of the decision.
 
-It is not a copy of the remote data.
+It is not a copy of the remote data or proof that remote asset bytes are unchanged.
 
 ## CLI map
 
@@ -491,6 +503,7 @@ stac-scout/
 │   └── live.py
 ├── docs/
 │   ├── ARCHITECTURE.md
+│   ├── MANIFEST.md
 │   └── TASK_RULES.md
 ├── skill/
 │   └── SKILL.md

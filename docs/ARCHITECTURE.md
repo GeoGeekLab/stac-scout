@@ -133,7 +133,11 @@ Source and output resolution are separate contracts:
 
 Resampling is also evidence-driven. Classification metadata and mask/quality roles select nearest-neighbor; known continuous measurement semantics select bilinear. Unknown semantics remain unresolved instead of silently defaulting to bilinear.
 
-A manifest records request, provider, collection, item IDs, selected assets, signing strategy, query, warnings, and Scout version. Replay performs a fresh search and reports item-set drift.
+A schema-versioned manifest records the canonical request/query fingerprints, provider and catalog capability evidence, normalized Collection snapshot, search limit and completeness state, retained Item evidence, full access plan, warnings, and Scout version.
+
+Search completeness is explicit: `complete` means the observed stream ended before the configured result cap; `capped` means the cap was reached and additional Items may exist; legacy/manual evidence may remain `unknown`.
+
+Replay re-runs the original request through the deterministic verification path and reuses the recorded search limit unless explicitly overridden. Missing/new Item claims are only confirmed when the relevant side of the comparison is complete. Otherwise the differences remain unresolved, preventing provider ordering changes in capped samples from becoming false drift claims. See `docs/MANIFEST.md`.
 
 ## Dependency direction
 
