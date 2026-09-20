@@ -24,3 +24,5 @@ class ProviderHealth(BaseModel):
     item_search: bool | None = None
     error_type: str | None = None
     error: str | None = None
+    status_code: int | None = None
+    retryable: bool | None = None
