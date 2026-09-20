@@ -140,9 +140,7 @@ def replay_manifest(
         for checks in checks_by_item
     )
     if unknown_cloud_items:
-        warnings.append(
-            f"{unknown_cloud_items} Item(s) have unknown cloud cover in the replay"
-        )
+        warnings.append(f"{unknown_cloud_items} Item(s) have unknown cloud cover in the replay")
 
     current_search = _search_observation(
         max_items=effective_max_items,
