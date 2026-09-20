@@ -9,6 +9,7 @@ from stac_scout.constraints import (
 )
 from stac_scout.models import (
     AccessPolicy,
+    AssetChoice,
     AssetInfo,
     BandInfo,
     ConstraintStatus,
@@ -222,3 +223,107 @@ def test_plan_volume_constraint_pass_fail_unknown(scout_request: ScoutRequest) -
     assert evaluate_plan_constraints(900, request)[0].status is ConstraintStatus.PASS
     assert evaluate_plan_constraints(1100, request)[0].status is ConstraintStatus.FAIL
     assert evaluate_plan_constraints(None, request)[0].status is ConstraintStatus.UNKNOWN
+
+
+def test_collection_resolution_fallback_without_required_measurements(
+    scout_request: ScoutRequest,
+) -> None:
+    request = scout_request.model_copy(update={"required_measurements": ()})
+    unknown = DatasetCard(
+        catalog_url="https://example.test/stac",
+        collection_id="unknown",
+    )
+    passing = unknown.model_copy(
+        update={"collection_id": "passing", "spatial_resolution_m": 5}
+    )
+    failing = unknown.model_copy(
+        update={"collection_id": "failing", "spatial_resolution_m": 30}
+    )
+
+    assert evaluate_constraints(unknown, request)[0].status is ConstraintStatus.UNKNOWN
+    assert evaluate_constraints(passing, request)[0].status is ConstraintStatus.PASS
+    assert evaluate_constraints(failing, request)[0].status is ConstraintStatus.FAIL
+
+
+def test_item_constraint_summary_covers_fail_and_empty(
+    scout_request: ScoutRequest,
+) -> None:
+    request = scout_request.model_copy(update={"max_cloud_cover": 20})
+    failing_checks = [
+        evaluate_item_constraints({"properties": {"eo:cloud_cover": 80}}, request)
+    ]
+
+    failing = summarize_item_constraints(failing_checks, request)
+    empty = summarize_item_constraints([], request)
+
+    assert failing[0].status is ConstraintStatus.FAIL
+    assert empty[0].status is ConstraintStatus.UNKNOWN
+    assert "no Items" in (empty[0].reason or "")
+
+
+def test_plan_constraints_reject_incomplete_item_asset_coverage(
+    scout_request: ScoutRequest,
+) -> None:
+    choice = AssetChoice(
+        measurement="red",
+        asset_key="B04",
+        match_basis="common_name",
+        selection_reason="fixture",
+        gsd_m=10,
+        gsd_complete=True,
+        item_coverage_complete=False,
+        resampling="bilinear",
+        resampling_basis="fixture",
+    )
+    request = scout_request.model_copy(update={"required_measurements": ("red",)})
+
+    checks = evaluate_plan_constraints(100, request, asset_choices=(choice,))
+    by_name = {check.name: check for check in checks}
+
+    assert by_name["asset_selection"].status is ConstraintStatus.FAIL
+    assert "not present on every" in (by_name["asset_selection"].reason or "")
+
+
+def test_plan_constraints_preserve_defensive_unknown_asset_selection(
+    scout_request: ScoutRequest,
+) -> None:
+    request = scout_request.model_copy(
+        update={
+            "required_measurements": ("red", "nir"),
+            "max_source_resolution_m": None,
+        }
+    )
+    choice = AssetChoice(
+        measurement="red",
+        asset_key="B04",
+        match_basis="common_name",
+        selection_reason="fixture",
+        item_coverage_complete=True,
+    )
+
+    checks = evaluate_plan_constraints(100, request, asset_choices=(choice,))
+
+    assert checks[0].name == "asset_selection"
+    assert checks[0].status is ConstraintStatus.UNKNOWN
+
+
+def test_plan_constraints_preserve_unknown_selected_asset_gsd(
+    scout_request: ScoutRequest,
+) -> None:
+    request = scout_request.model_copy(update={"required_measurements": ("red",)})
+    choice = AssetChoice(
+        measurement="red",
+        asset_key="B04",
+        match_basis="common_name",
+        selection_reason="fixture",
+        gsd_m=None,
+        gsd_complete=False,
+        item_coverage_complete=True,
+    )
+
+    checks = evaluate_plan_constraints(100, request, asset_choices=(choice,))
+    by_name = {check.name: check for check in checks}
+
+    assert by_name["asset_selection"].status is ConstraintStatus.PASS
+    assert by_name["source_resolution_m"].status is ConstraintStatus.UNKNOWN
+    assert "not fully declared" in (by_name["source_resolution_m"].reason or "")
