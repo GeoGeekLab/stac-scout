@@ -29,7 +29,7 @@ planning raster reads, and replaying the result later.
 
 <br>
 
-<img src="docs/assets/mascot/scout-hero.webp" width="300" alt="Scout, the STAC Scout mascot">
+<img src="docs/assets/mascot/scout-hero.webp" width="240" alt="Scout, the STAC Scout mascot">
 
 **Find it. Verify it. Plan it. Replay it.**
 
@@ -371,7 +371,7 @@ The rest of the pipeline is the same CLI and model layer used by hand-written re
 
 ## Development
 
-<img src="docs/assets/mascot/scout-terminal.webp" width="420" align="right" alt="Scout working at a geospatial developer terminal">
+<img src="docs/assets/mascot/scout-terminal.webp" width="300" align="right" alt="Scout working at a geospatial developer terminal">
 
 Scout is happiest when the tests are boring.
 
