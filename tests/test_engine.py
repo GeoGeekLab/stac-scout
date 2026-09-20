@@ -85,6 +85,11 @@ class ModalityAdapter(Adapter):
             },
         ]
 
+    def get_collection(self, collection_id: str) -> dict[str, Any]:
+        return next(
+            collection for collection in self.list_collections() if collection["id"] == collection_id
+        )
+
 
 class CloudAdapter(Adapter):
     def __init__(self, cloud_values: list[float | None]) -> None:
@@ -143,6 +148,16 @@ def test_engine_filters_hard_constraint_failures_before_ranking(
     assert [result.dataset.collection_id for result in discovery] == ["optical"]
     assert discovery[0].constraints[0].name == "data_type"
     assert discovery[0].constraints[0].status is ConstraintStatus.PASS
+
+
+def test_engine_direct_verify_rejects_collection_constraint_failure(
+    scout_request: ScoutRequest,
+) -> None:
+    request = scout_request.model_copy(update={"data_type": DataType.OPTICAL})
+    engine = ScoutEngine(ModalityAdapter())
+
+    with pytest.raises(ConstraintViolationError, match="Collection-level hard constraints failed"):
+        engine.verify(request, "sar-high-text-score")
 
 
 def test_engine_verify_applies_known_cloud_constraint(
