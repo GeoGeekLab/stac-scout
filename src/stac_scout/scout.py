@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -53,12 +54,14 @@ def _normalize_provider_collection(raw: dict[str, Any], catalog_url: str) -> Dat
         ) from exc
 
 
-def _validate_provider_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _validate_provider_items(items: Sequence[Any]) -> list[dict[str, Any]]:
+    validated: list[dict[str, Any]] = []
     for index, item in enumerate(items):
         if not isinstance(item, dict):
             message = f"provider Item metadata at index {index} is not an object"
             raise ProviderMetadataError(message)
-    return items
+        validated.append(item)
+    return validated
 
 
 def _merge_constraint_checks(
