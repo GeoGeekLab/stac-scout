@@ -1,4 +1,5 @@
 from .manifest import (
+    ManifestIntegrityError,
     UnsupportedManifestVersionError,
     build_manifest,
     canonical_fingerprint,
@@ -8,6 +9,7 @@ from .manifest import (
 from .replay import ReplayResult, replay_manifest
 
 __all__ = [
+    "ManifestIntegrityError",
     "ReplayResult",
     "UnsupportedManifestVersionError",
     "build_manifest",
