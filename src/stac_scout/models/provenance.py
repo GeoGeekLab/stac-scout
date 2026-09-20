@@ -27,7 +27,7 @@ class SearchQuery(BaseModel):
 class Manifest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    schema_version: Literal["1.0"] = CURRENT_MANIFEST_SCHEMA_VERSION
+    schema_version: Literal["1.0"] = "1.0"
     migrated_from_schema_version: str | None = None
     scout_version: str
     generated_at: datetime
