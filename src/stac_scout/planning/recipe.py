@@ -11,7 +11,7 @@ def odc_stac_recipe(manifest: Manifest) -> str:
     geometry = repr(request.geometry)
     assets = repr(list(manifest.asset_keys))
     resolution_line = (
-        f"    resolution={request.target_resolution_m!r},\\n"
+        f"    resolution={request.target_resolution_m!r},\n"
         if request.target_resolution_m is not None
         else ""
     )
