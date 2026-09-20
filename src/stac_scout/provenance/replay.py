@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
@@ -43,7 +44,7 @@ class ReplayResult:
     warnings: tuple[str, ...]
 
 
-def _validated_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _validated_items(items: Sequence[Any]) -> list[dict[str, Any]]:
     validated: list[dict[str, Any]] = []
     for index, item in enumerate(items):
         if not isinstance(item, dict):
