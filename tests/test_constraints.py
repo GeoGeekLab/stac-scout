@@ -233,12 +233,8 @@ def test_collection_resolution_fallback_without_required_measurements(
         catalog_url="https://example.test/stac",
         collection_id="unknown",
     )
-    passing = unknown.model_copy(
-        update={"collection_id": "passing", "spatial_resolution_m": 5}
-    )
-    failing = unknown.model_copy(
-        update={"collection_id": "failing", "spatial_resolution_m": 30}
-    )
+    passing = unknown.model_copy(update={"collection_id": "passing", "spatial_resolution_m": 5})
+    failing = unknown.model_copy(update={"collection_id": "failing", "spatial_resolution_m": 30})
 
     assert evaluate_constraints(unknown, request)[0].status is ConstraintStatus.UNKNOWN
     assert evaluate_constraints(passing, request)[0].status is ConstraintStatus.PASS
