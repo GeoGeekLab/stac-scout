@@ -17,6 +17,7 @@ from stac_scout.models import (
     Manifest,
     SearchCompleteness,
     SearchObservation,
+    VerificationStatus,
 )
 from stac_scout.normalize import normalize_collection
 from stac_scout.verify import probe_items
@@ -134,6 +135,18 @@ def replay_manifest(
             f"excluded {failed_items} Item(s) that fail current Item-level hard constraints"
         )
 
+    unknown_cloud_items = sum(
+        any(
+            check.name == "cloud_cover" and check.status is ConstraintStatus.UNKNOWN
+            for check in checks
+        )
+        for checks in checks_by_item
+    )
+    if unknown_cloud_items:
+        warnings.append(
+            f"{unknown_cloud_items} Item(s) have unknown cloud cover in the replay"
+        )
+
     current_search = _search_observation(
         max_items=effective_max_items,
         returned_items=len(raw_items),
@@ -144,6 +157,21 @@ def replay_manifest(
             "current replay search reached max_items; some apparent differences may be ordering "
             "or truncation artifacts"
         )
+        if manifest.request.max_cloud_cover is not None:
+            item_summary = tuple(
+                check.model_copy(
+                    update={
+                        "status": ConstraintStatus.UNKNOWN,
+                        "reason": (
+                            "all inspected Items with known cloud cover failed, but the replay "
+                            "search reached its cap so additional qualifying Items may exist"
+                        ),
+                    }
+                )
+                if check.name == "cloud_cover" and check.status is ConstraintStatus.FAIL
+                else check
+                for check in item_summary
+            )
     elif current_search.completeness is SearchCompleteness.UNKNOWN:
         warnings.append(
             "current provider returned more Items than max_items; search completeness is unknown"
@@ -155,10 +183,21 @@ def replay_manifest(
             "result-set completeness"
         )
 
-    probe = probe_items(items, geometry).model_copy(
+    probe = probe_items(items, geometry)
+    probe_status = probe.status
+    if (
+        not items
+        and raw_items
+        and current_search.completeness is SearchCompleteness.LIMIT_REACHED
+        and any(check.status is ConstraintStatus.UNKNOWN for check in item_summary)
+    ):
+        probe_status = VerificationStatus.INCONCLUSIVE
+
+    probe = probe.model_copy(
         update={
+            "status": probe_status,
             "constraints": item_summary,
-            "warnings": tuple(dict.fromkeys((*warnings,))),
+            "warnings": tuple(dict.fromkeys(warnings)),
         }
     )
 
