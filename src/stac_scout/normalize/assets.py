@@ -9,7 +9,13 @@ from .bands import band_definitions, normalize_band
 
 def normalize_asset(key: str, raw: dict[str, Any]) -> AssetInfo:
     size = raw.get("file:size")
-    size_bytes = size if isinstance(size, int) and size >= 0 else None
+    size_bytes = size if isinstance(size, int) and not isinstance(size, bool) and size >= 0 else None
+    gsd = raw.get("gsd")
+    gsd_m = (
+        float(gsd)
+        if isinstance(gsd, (int, float)) and not isinstance(gsd, bool) and gsd > 0
+        else None
+    )
     roles_value = raw.get("roles")
     roles = roles_value if isinstance(roles_value, list) else []
     bands = tuple(normalize_band(band) for band in band_definitions(raw))
@@ -21,4 +27,5 @@ def normalize_asset(key: str, raw: dict[str, Any]) -> AssetInfo:
         title=raw.get("title"),
         bands=bands,
         size_bytes=size_bytes,
+        gsd_m=gsd_m,
     )
