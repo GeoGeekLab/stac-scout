@@ -4,10 +4,12 @@ from collections import defaultdict
 from collections.abc import Mapping, Sequence
 from concurrent.futures import Future, ThreadPoolExecutor, wait
 from dataclasses import dataclass
+from math import isfinite
 
 from stac_scout.catalogs import (
     CatalogAdapter,
     ProviderError,
+    ProviderNetworkPolicy,
     ProviderTimeoutError,
     build_adapter,
 )
@@ -67,9 +69,16 @@ class FederatedScout:
         cls,
         registry: ProviderRegistry,
         provider_keys: Sequence[str] | None = None,
+        *,
+        network_policy: ProviderNetworkPolicy | None = None,
     ) -> FederatedScout:
         providers = registry.select(provider_keys)
-        return cls({provider.key: build_adapter(provider) for provider in providers})
+        return cls(
+            {
+                provider.key: build_adapter(provider, network_policy=network_policy)
+                for provider in providers
+            }
+        )
 
     @staticmethod
     def _provider_failure(provider_key: str, exc: ProviderError) -> ProviderFailure:
@@ -90,10 +99,14 @@ class FederatedScout:
         max_workers: int = 4,
         overall_timeout_s: float = 30.0,
     ) -> FederatedDiscovery:
+        if per_provider_limit < 1:
+            raise ValueError("per_provider_limit must be at least 1")
+        if limit is not None and limit < 0:
+            raise ValueError("limit must not be negative")
         if max_workers < 1:
             raise ValueError("max_workers must be at least 1")
-        if overall_timeout_s <= 0:
-            raise ValueError("overall_timeout_s must be positive")
+        if not isfinite(overall_timeout_s) or overall_timeout_s <= 0:
+            raise ValueError("overall_timeout_s must be finite and positive")
 
         candidates: list[FederatedCandidate] = []
         failures: list[ProviderFailure] = []
