@@ -20,6 +20,7 @@ from stac_scout.models import (
 )
 from stac_scout.planning import odc_stac_recipe
 from stac_scout.provenance import (
+    ManifestIntegrityError,
     UnsupportedManifestVersionError,
     build_manifest,
     canonical_fingerprint,
@@ -240,6 +241,19 @@ def test_legacy_unversioned_manifest_migrates_conservatively(
     assert migrated.access_plan is None
     assert [item.item_id for item in migrated.item_evidence] == ["scene-1"]
     assert migrated.migration_warnings
+
+
+def test_manifest_reader_detects_request_fingerprint_drift(
+    tmp_path: Path,
+    scout_request: ScoutRequest,
+) -> None:
+    payload = _manifest(scout_request).model_dump(mode="json")
+    payload["request"]["task"] = "tampered task"
+    path = tmp_path / "tampered.manifest.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(ManifestIntegrityError, match="request fingerprint"):
+        read_manifest(path)
 
 
 def test_unknown_future_manifest_version_is_rejected(
