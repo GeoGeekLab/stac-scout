@@ -83,10 +83,8 @@ class SearchObservation(BaseModel):
         ):
             message = "complete search must return fewer Items than the recorded max_items"
             raise ValueError(message)
-        if (
-            self.completeness is SearchCompleteness.LIMIT_REACHED
-            and (self.max_items is None or self.returned_items != self.max_items)
-        ):
+        limit_reached = self.completeness is SearchCompleteness.LIMIT_REACHED
+        if limit_reached and (self.max_items is None or self.returned_items != self.max_items):
             message = "limit_reached search must return exactly the recorded max_items"
             raise ValueError(message)
         return self
