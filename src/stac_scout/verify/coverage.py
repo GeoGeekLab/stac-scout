@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from math import isfinite
-from typing import Any, Iterable
+from typing import Any
 
 from pyproj import CRS, Geod, Transformer
 from shapely import segmentize
