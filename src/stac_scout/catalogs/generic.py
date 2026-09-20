@@ -25,6 +25,13 @@ class LocationResolutionRequired(ValueError):
     pass
 
 
+def _record_dict(record: Any, *, context: str) -> dict[str, Any]:
+    payload = record.to_dict()
+    if not isinstance(payload, dict):
+        raise ProviderMetadataError(f"{context}: expected an object")
+    return cast(dict[str, Any], payload)
+
+
 class GenericStacAdapter:
     def __init__(
         self,
@@ -89,7 +96,7 @@ class GenericStacAdapter:
 
         def load() -> list[dict[str, Any]]:
             return [
-                cast(dict[str, Any], collection.to_dict())
+                _record_dict(collection, context="collection metadata is invalid")
                 for collection in client.get_collections()
             ]
 
@@ -111,7 +118,10 @@ class GenericStacAdapter:
             )
 
         return self._provider_call(
-            lambda: cast(dict[str, Any], collection.to_dict()),
+            lambda: _record_dict(
+                collection,
+                context=f"collection {collection_id!r} metadata is invalid",
+            ),
             metadata_context=f"collection {collection_id!r} metadata is invalid",
         )
 
@@ -137,7 +147,10 @@ class GenericStacAdapter:
                 datetime=interval,
                 max_items=max_items,
             )
-            return [cast(dict[str, Any], item.to_dict()) for item in search.items()]
+            return [
+                _record_dict(item, context="provider Item metadata is invalid")
+                for item in search.items()
+            ]
 
         return self._provider_call(
             load,
