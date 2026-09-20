@@ -7,7 +7,7 @@ from time import perf_counter
 import httpx
 
 from stac_scout.catalogs.capabilities import inspect_catalog
-from stac_scout.catalogs.errors import ProviderError
+from stac_scout.catalogs.errors import ProviderError, ProviderNetworkError
 from stac_scout.catalogs.network import ProviderNetworkPolicy
 from stac_scout.models import ProviderHealth, ProviderHealthStatus, ProviderSpec
 
@@ -32,14 +32,21 @@ def check_provider(
         )
     except ProviderError as exc:
         elapsed = max(0.0, (clock() - started) * 1000)
+        status = (
+            ProviderHealthStatus.UNREACHABLE
+            if isinstance(exc, ProviderNetworkError)
+            else ProviderHealthStatus.DEGRADED
+        )
         return ProviderHealth(
             provider_key=provider.key,
             url=provider.url,
-            status=ProviderHealthStatus.UNREACHABLE,
+            status=status,
             checked_at=checked_at,
             latency_ms=elapsed,
             error_type=type(exc).__name__,
             error=str(exc),
+            status_code=exc.status_code,
+            retryable=exc.retryable,
         )
 
     elapsed = max(0.0, (clock() - started) * 1000)
