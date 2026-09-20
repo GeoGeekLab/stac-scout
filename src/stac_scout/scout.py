@@ -44,6 +44,16 @@ class PlannedDataset:
     missing_measurements: tuple[str, ...]
 
 
+def _merge_constraint_checks(
+    base: tuple[ConstraintCheck, ...],
+    refinements: tuple[ConstraintCheck, ...],
+) -> tuple[ConstraintCheck, ...]:
+    refined = {check.name: check for check in refinements}
+    merged = [refined.pop(check.name, check) for check in base]
+    merged.extend(refined.values())
+    return tuple(merged)
+
+
 class ScoutEngine:
     def __init__(self, adapter: CatalogAdapter) -> None:
         self.adapter = adapter
@@ -101,6 +111,20 @@ class ScoutEngine:
         if request.geometry is None:
             raise ValueError("request geometry is required for live verification")
 
+        collection = normalize_collection(
+            self.adapter.get_collection(collection_id),
+            self.adapter.catalog_url,
+        )
+        collection_checks = evaluate_constraints(collection, request)
+        collection_failures = tuple(
+            check for check in collection_checks if check.status is ConstraintStatus.FAIL
+        )
+        if collection_failures:
+            raise ConstraintViolationError(
+                "Collection-level hard constraints failed; refusing Item verification",
+                collection_failures,
+            )
+
         raw_items = self.adapter.search_items(request, collection_id, max_items=max_items)
         checks_by_item = [evaluate_item_constraints(item, request) for item in raw_items]
         items = [
@@ -109,7 +133,7 @@ class ScoutEngine:
             if not has_failed_constraint(checks)
         ]
 
-        constraint_summary = summarize_item_constraints(checks_by_item, request)
+        item_summary = summarize_item_constraints(checks_by_item, request)
         warnings: list[str] = []
         failed_items = sum(has_failed_constraint(checks) for checks in checks_by_item)
         unknown_cloud_items = sum(
@@ -135,7 +159,7 @@ class ScoutEngine:
                 "cloud-cover filtering was evaluated after a capped Item search; "
                 "additional matching Items may exist"
             )
-            constraint_summary = tuple(
+            item_summary = tuple(
                 check.model_copy(
                     update={
                         "status": ConstraintStatus.UNKNOWN,
@@ -147,23 +171,24 @@ class ScoutEngine:
                 )
                 if check.name == "cloud_cover" and check.status is ConstraintStatus.FAIL
                 else check
-                for check in constraint_summary
+                for check in item_summary
             )
 
+        constraints = _merge_constraint_checks(collection_checks, item_summary)
         probe = probe_items(items, request.geometry)
         status = probe.status
         if (
             not items
             and raw_items
             and capped
-            and any(check.status is ConstraintStatus.UNKNOWN for check in constraint_summary)
+            and any(check.status is ConstraintStatus.UNKNOWN for check in constraints)
         ):
             status = VerificationStatus.INCONCLUSIVE
 
         probe = probe.model_copy(
             update={
                 "status": status,
-                "constraints": constraint_summary,
+                "constraints": constraints,
                 "warnings": tuple(dict.fromkeys((*probe.warnings, *warnings))),
             }
         )
@@ -194,14 +219,28 @@ class ScoutEngine:
             probe,
             output_crs=output_crs,
         )
+        constraints = _merge_constraint_checks(probe.constraints, access_plan.constraints)
         planning_failures = tuple(
-            check for check in access_plan.constraints if check.status is ConstraintStatus.FAIL
+            check for check in constraints if check.status is ConstraintStatus.FAIL
         )
         if planning_failures:
             raise ConstraintViolationError(
                 "planning-level hard constraints failed; refusing to build a manifest",
                 planning_failures,
             )
+
+        unresolved = tuple(
+            check.name for check in constraints if check.status is ConstraintStatus.UNKNOWN
+        )
+        notes = list(access_plan.notes)
+        if unresolved:
+            notes.append(f"unresolved hard constraints: {', '.join(unresolved)}")
+        access_plan = access_plan.model_copy(
+            update={
+                "constraints": constraints,
+                "notes": tuple(dict.fromkeys(notes)),
+            }
+        )
 
         provider_key = getattr(self.adapter, "provider_key", None)
         if not isinstance(provider_key, str):
