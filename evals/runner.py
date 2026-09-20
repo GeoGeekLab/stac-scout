@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict
-
 from stac_scout.identity import dataset_identity
 from stac_scout.models import (
     DataType,
