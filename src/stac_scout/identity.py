@@ -22,6 +22,10 @@ def _normalized_doi(value: str) -> str:
     return doi
 
 
+def _valid_normalized_doi(value: str) -> bool:
+    return re.fullmatch(r"10\.\d{4,9}/\S+", value) is not None
+
+
 def _fingerprint(payload: object) -> str:
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()[:20]
@@ -30,11 +34,12 @@ def _fingerprint(payload: object) -> str:
 def dataset_identity(card: DatasetCard) -> DatasetIdentity:
     if card.doi:
         doi = _normalized_doi(card.doi)
-        return DatasetIdentity(
-            key=f"doi:{doi}",
-            strength=IdentityStrength.EXACT,
-            basis=("sci:doi",),
-        )
+        if _valid_normalized_doi(doi):
+            return DatasetIdentity(
+                key=f"doi:{doi}",
+                strength=IdentityStrength.EXACT,
+                basis=("sci:doi",),
+            )
 
     semantic = {
         "collection_id": _slug(card.collection_id),

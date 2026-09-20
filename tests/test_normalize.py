@@ -114,3 +114,33 @@ def test_normalize_collection_handles_sparse_metadata() -> None:
     assert card.spatial_resolution_m is None
     assert card.data_type is None
     assert card.assets == ()
+
+
+def test_normalize_collection_aggregates_multiple_extents() -> None:
+    card = normalize_collection(
+        {
+            "id": "multi-extent",
+            "extent": {
+                "spatial": {
+                    "bbox": [
+                        [-10, -5, 0, 5],
+                        [20, -10, 30, 10],
+                    ]
+                },
+                "temporal": {
+                    "interval": [
+                        ["2020-01-01T00:00:00Z", "2020-12-31T00:00:00Z"],
+                        ["2018-01-01T00:00:00Z", "2022-12-31T00:00:00Z"],
+                    ]
+                },
+            },
+            "summaries": {},
+        },
+        "https://example.test/stac",
+    )
+
+    assert card.spatial_extent == (-10.0, -10.0, 30.0, 10.0)
+    assert card.temporal_start is not None
+    assert card.temporal_start.isoformat() == "2018-01-01T00:00:00+00:00"
+    assert card.temporal_end is not None
+    assert card.temporal_end.isoformat() == "2022-12-31T00:00:00+00:00"

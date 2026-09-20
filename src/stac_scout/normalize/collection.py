@@ -19,20 +19,79 @@ def _parse_datetime(value: Any) -> datetime | None:
 
 
 def _spatial_extent(raw: dict[str, Any]) -> tuple[float, float, float, float] | None:
-    boxes = raw.get("extent", {}).get("spatial", {}).get("bbox", [])
-    if not boxes or not isinstance(boxes[0], list) or len(boxes[0]) < 4:
+    extent = raw.get("extent")
+    if not isinstance(extent, dict):
         return None
-    west, south, east, north = boxes[0][:4]
-    return (float(west), float(south), float(east), float(north))
+    spatial = extent.get("spatial")
+    if not isinstance(spatial, dict):
+        return None
+    boxes = spatial.get("bbox")
+    if boxes is None:
+        return None
+    if not isinstance(boxes, list):
+        raise ValueError("Collection spatial bbox metadata must be a list")
+    if not boxes:
+        return None
+
+    valid_boxes: list[tuple[float, float, float, float]] = []
+    for box in boxes:
+        if not isinstance(box, list) or len(box) < 4:
+            raise ValueError("Collection spatial bbox entry must contain four coordinates")
+        values = box[:4]
+        if any(not isinstance(value, (int, float)) or isinstance(value, bool) for value in values):
+            raise ValueError("Collection spatial bbox coordinates must be numeric")
+        west, south, east, north = (float(value) for value in values)
+        valid_boxes.append((west, south, east, north))
+
+    return (
+        min(box[0] for box in valid_boxes),
+        min(box[1] for box in valid_boxes),
+        max(box[2] for box in valid_boxes),
+        max(box[3] for box in valid_boxes),
+    )
 
 
 def _temporal_extent(raw: dict[str, Any]) -> tuple[datetime | None, datetime | None]:
-    intervals = raw.get("extent", {}).get("temporal", {}).get("interval", [])
-    if not intervals or not isinstance(intervals[0], list):
+    extent = raw.get("extent")
+    if not isinstance(extent, dict):
         return (None, None)
-    start = intervals[0][0] if len(intervals[0]) > 0 else None
-    end = intervals[0][1] if len(intervals[0]) > 1 else None
-    return (_parse_datetime(start), _parse_datetime(end))
+    temporal = extent.get("temporal")
+    if not isinstance(temporal, dict):
+        return (None, None)
+    intervals = temporal.get("interval")
+    if not isinstance(intervals, list):
+        return (None, None)
+
+    parsed: list[tuple[datetime | None, datetime | None]] = []
+    for interval in intervals:
+        if not isinstance(interval, list):
+            continue
+        raw_start = interval[0] if len(interval) > 0 else None
+        raw_end = interval[1] if len(interval) > 1 else None
+        start = _parse_datetime(raw_start)
+        end = _parse_datetime(raw_end)
+        if raw_start is not None and start is None:
+            continue
+        if raw_end is not None and end is None:
+            continue
+        parsed.append((start, end))
+
+    if not parsed:
+        return (None, None)
+
+    starts = [start for start, _ in parsed]
+    ends = [end for _, end in parsed]
+    overall_start = (
+        None
+        if any(value is None for value in starts)
+        else min(value for value in starts if value is not None)
+    )
+    overall_end = (
+        None
+        if any(value is None for value in ends)
+        else max(value for value in ends if value is not None)
+    )
+    return (overall_start, overall_end)
 
 
 def _resolution(raw: dict[str, Any]) -> float | None:

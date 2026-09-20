@@ -5,6 +5,7 @@ The offline evaluation corpus tests decision contracts rather than model wording
 - `cases/` covers request invariants.
 - `federation_cases/` covers cross-catalog identity and deduplication.
 - `task_cases/` covers deterministic geospatial task derivations.
+- `regression_matrix.json` binds each hardening acceptance scenario to concrete pytest node IDs; the runner fails if a required scenario or referenced test disappears.
 
 Run deterministic evaluations with:
 
@@ -18,4 +19,4 @@ Live provider observations are separate because remote state changes over time:
 python evals/live.py
 ```
 
-The GitHub workflow **Live provider checks** is manual and does not gate ordinary CI.
+The deterministic runner and pytest suite gate ordinary CI. Live provider observations stay separate because remote catalogs are mutable; the GitHub workflow **Live provider checks** is manual and non-gating.
