@@ -49,24 +49,28 @@ def test_inspect_catalog_reads_conformance_link() -> None:
 
 
 def test_inspect_catalog_rejects_non_object_root() -> None:
-    with httpx.Client(
-        transport=httpx.MockTransport(lambda request: httpx.Response(200, json=[]))
-    ) as client:
-        with pytest.raises(ProviderMetadataError, match="non-object JSON"):
-            inspect_catalog("https://example.test/stac", client=client)
+    with (
+        httpx.Client(
+            transport=httpx.MockTransport(lambda request: httpx.Response(200, json=[]))
+        ) as client,
+        pytest.raises(ProviderMetadataError, match="non-object JSON"),
+    ):
+        inspect_catalog("https://example.test/stac", client=client)
 
 
 def test_inspect_catalog_rejects_malformed_links() -> None:
-    with httpx.Client(
-        transport=httpx.MockTransport(
-            lambda request: httpx.Response(
-                200,
-                json={"stac_version": "1.0.0", "links": "not-a-list"},
+    with (
+        httpx.Client(
+            transport=httpx.MockTransport(
+                lambda request: httpx.Response(
+                    200,
+                    json={"stac_version": "1.0.0", "links": "not-a-list"},
+                )
             )
-        )
-    ) as client:
-        with pytest.raises(ProviderMetadataError, match="links must be an array"):
-            inspect_catalog("https://example.test/stac", client=client)
+        ) as client,
+        pytest.raises(ProviderMetadataError, match="links must be an array"),
+    ):
+        inspect_catalog("https://example.test/stac", client=client)
 
 
 def test_inspect_catalog_retries_rate_limit_and_caps_retry_after(
@@ -122,13 +126,15 @@ def test_inspect_catalog_raises_rate_limit_after_retry_budget(
     monkeypatch.setattr(capabilities_module.time, "sleep", sleeps.append)
     policy = ProviderNetworkPolicy(max_retries=1, backoff_jitter_s=0)
 
-    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
-        with pytest.raises(ProviderRateLimitError) as exc_info:
-            inspect_catalog(
-                "https://example.test/stac",
-                client=client,
-                network_policy=policy,
-            )
+    with (
+        httpx.Client(transport=httpx.MockTransport(handler)) as client,
+        pytest.raises(ProviderRateLimitError) as exc_info,
+    ):
+        inspect_catalog(
+            "https://example.test/stac",
+            client=client,
+            network_policy=policy,
+        )
 
     assert calls == 2
     assert sleeps == [0.0]
@@ -154,13 +160,15 @@ def test_inspect_catalog_retries_timeout_then_raises_typed_error(
         backoff_jitter_s=0,
     )
 
-    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
-        with pytest.raises(ProviderTimeoutError, match="slow provider") as exc_info:
-            inspect_catalog(
-                "https://example.test/stac",
-                client=client,
-                network_policy=policy,
-            )
+    with (
+        httpx.Client(transport=httpx.MockTransport(handler)) as client,
+        pytest.raises(ProviderTimeoutError, match="slow provider") as exc_info,
+    ):
+        inspect_catalog(
+            "https://example.test/stac",
+            client=client,
+            network_policy=policy,
+        )
 
     assert calls == 2
     assert sleeps == [0.25]
@@ -175,13 +183,15 @@ def test_inspect_catalog_does_not_retry_authentication_failure() -> None:
         calls += 1
         return httpx.Response(401)
 
-    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
-        with pytest.raises(ProviderAuthenticationError) as exc_info:
-            inspect_catalog(
-                "https://example.test/stac",
-                client=client,
-                network_policy=ProviderNetworkPolicy(max_retries=2),
-            )
+    with (
+        httpx.Client(transport=httpx.MockTransport(handler)) as client,
+        pytest.raises(ProviderAuthenticationError) as exc_info,
+    ):
+        inspect_catalog(
+            "https://example.test/stac",
+            client=client,
+            network_policy=ProviderNetworkPolicy(max_retries=2),
+        )
 
     assert calls == 1
     assert exc_info.value.status_code == 401
@@ -200,15 +210,17 @@ def test_inspect_catalog_classifies_exhausted_http_408_as_timeout(
         backoff_jitter_s=0,
     )
 
-    with httpx.Client(
-        transport=httpx.MockTransport(lambda request: httpx.Response(408))
-    ) as client:
-        with pytest.raises(ProviderTimeoutError) as exc_info:
-            inspect_catalog(
-                "https://example.test/stac",
-                client=client,
-                network_policy=policy,
-            )
+    with (
+        httpx.Client(
+            transport=httpx.MockTransport(lambda request: httpx.Response(408))
+        ) as client,
+        pytest.raises(ProviderTimeoutError) as exc_info,
+    ):
+        inspect_catalog(
+            "https://example.test/stac",
+            client=client,
+            network_policy=policy,
+        )
 
     assert sleeps == [0.0]
     assert exc_info.value.status_code == 408
