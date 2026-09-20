@@ -196,6 +196,17 @@ def test_engine_discovers_and_plans(scout_request: ScoutRequest) -> None:
     assert planned.probe.items_checked == 1
     assert planned.access_plan.assets == ("red", "nir")
     assert planned.manifest.collection_id == "optical"
+    assert planned.manifest.schema_version == 1
+    assert planned.manifest.search.max_items == 100
+    assert planned.manifest.search.completeness.value == "complete"
+    assert planned.manifest.catalog_capabilities is not None
+    assert planned.manifest.catalog_capabilities.item_search is True
+    assert planned.manifest.collection_snapshot is not None
+    assert planned.manifest.access_plan == planned.access_plan
+    assert {snapshot.asset_key for snapshot in planned.manifest.asset_metadata} == {
+        "nir",
+        "red",
+    }
 
 
 def test_engine_filters_hard_constraint_failures_before_ranking(
