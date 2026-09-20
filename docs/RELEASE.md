@@ -24,7 +24,8 @@ No long-lived PyPI API token is required or expected.
 5. It verifies the wheel's version and packaged registry data.
 6. It records SHA-256 checksums and creates GitHub artifact provenance attestations.
 7. The exact built distributions are published to PyPI through OIDC Trusted Publishing.
-8. Only after PyPI succeeds, the workflow creates tag `vX.Y.Z` on the same commit and attaches those same files and checksums to the GitHub Release.
+8. A clean Python 3.14 environment installs `stac-scout==X.Y.Z` from PyPI and runs the README first-success path.
+9. Only after the PyPI smoke test succeeds, the workflow creates tag `vX.Y.Z` on the same commit and attaches those same files and checksums to the GitHub Release.
 
 A release is incomplete if any of these jobs fails.
 
