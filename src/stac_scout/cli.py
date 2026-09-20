@@ -235,6 +235,8 @@ def federate(
     provider: Annotated[list[str] | None, typer.Option("--provider")] = None,
     per_provider_limit: Annotated[int, typer.Option(min=1, max=100)] = 10,
     limit: Annotated[int, typer.Option(min=1, max=500)] = 20,
+    max_workers: Annotated[int, typer.Option(min=1, max=32)] = 4,
+    overall_timeout: Annotated[float, typer.Option(min=0.1, max=300.0)] = 30.0,
 ) -> None:
     request = _load_request(request_path)
     registry = ProviderRegistry.builtin()
@@ -247,6 +249,8 @@ def federate(
         request,
         per_provider_limit=per_provider_limit,
         limit=limit,
+        max_workers=max_workers,
+        overall_timeout_s=overall_timeout,
     )
     _print_json(
         {
@@ -282,6 +286,8 @@ def federate(
                     "provider": failure.provider_key,
                     "error_type": failure.error_type,
                     "message": failure.message,
+                    "status_code": failure.status_code,
+                    "retryable": failure.retryable,
                 }
                 for failure in result.failures
             ],
