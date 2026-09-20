@@ -316,7 +316,10 @@ def evaluate_plan_constraints(
         failed = tuple(
             choice.measurement
             for choice in asset_choices
-            if choice.gsd_m is not None and choice.gsd_m > request.max_source_resolution_m
+            if (
+                choice.gsd_m is not None
+                and choice.gsd_m > request.max_source_resolution_m
+            )
         )
         unknown = tuple(
             choice.measurement
