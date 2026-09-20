@@ -34,10 +34,7 @@ def _spatial_extent(raw: dict[str, Any]) -> tuple[float, float, float, float] | 
         if not isinstance(box, list) or len(box) < 4:
             continue
         values = box[:4]
-        if any(
-            not isinstance(value, (int, float)) or isinstance(value, bool)
-            for value in values
-        ):
+        if any(not isinstance(value, (int, float)) or isinstance(value, bool) for value in values):
             continue
         west, south, east, north = (float(value) for value in values)
         valid_boxes.append((west, south, east, north))
@@ -83,11 +80,15 @@ def _temporal_extent(raw: dict[str, Any]) -> tuple[datetime | None, datetime | N
 
     starts = [start for start, _ in parsed]
     ends = [end for _, end in parsed]
-    overall_start = None if any(value is None for value in starts) else min(
-        value for value in starts if value is not None
+    overall_start = (
+        None
+        if any(value is None for value in starts)
+        else min(value for value in starts if value is not None)
     )
-    overall_end = None if any(value is None for value in ends) else max(
-        value for value in ends if value is not None
+    overall_end = (
+        None
+        if any(value is None for value in ends)
+        else max(value for value in ends if value is not None)
     )
     return (overall_start, overall_end)
 
