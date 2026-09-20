@@ -186,3 +186,30 @@ def test_inspect_catalog_does_not_retry_authentication_failure() -> None:
     assert calls == 1
     assert exc_info.value.status_code == 401
     assert exc_info.value.retryable is False
+
+
+def test_inspect_catalog_classifies_exhausted_http_408_as_timeout(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    sleeps: list[float] = []
+
+    monkeypatch.setattr(capabilities_module.time, "sleep", sleeps.append)
+    policy = ProviderNetworkPolicy(
+        max_retries=1,
+        backoff_factor_s=0,
+        backoff_jitter_s=0,
+    )
+
+    with httpx.Client(
+        transport=httpx.MockTransport(lambda request: httpx.Response(408))
+    ) as client:
+        with pytest.raises(ProviderTimeoutError) as exc_info:
+            inspect_catalog(
+                "https://example.test/stac",
+                client=client,
+                network_policy=policy,
+            )
+
+    assert sleeps == [0.0]
+    assert exc_info.value.status_code == 408
+    assert exc_info.value.retryable is True
