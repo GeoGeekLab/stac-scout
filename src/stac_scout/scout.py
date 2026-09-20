@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from stac_scout.catalogs import CatalogAdapter
+from stac_scout.catalogs import CatalogAdapter, ProviderMetadataError
 from stac_scout.constraints import (
     ConstraintViolationError,
     evaluate_constraints,
@@ -44,6 +44,24 @@ class PlannedDataset:
     missing_measurements: tuple[str, ...]
 
 
+def _normalize_provider_collection(raw: dict[str, Any], catalog_url: str) -> DatasetCard:
+    try:
+        return normalize_collection(raw, catalog_url)
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ProviderMetadataError(
+            f"provider Collection metadata could not be normalized: {exc}"
+        ) from exc
+
+
+def _validate_provider_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    for index, item in enumerate(items):
+        if not isinstance(item, dict):
+            raise ProviderMetadataError(
+                f"provider Item metadata at index {index} is not an object"
+            )
+    return items
+
+
 def _merge_constraint_checks(
     base: tuple[ConstraintCheck, ...],
     refinements: tuple[ConstraintCheck, ...],
@@ -60,7 +78,7 @@ class ScoutEngine:
 
     def discover(self, request: ScoutRequest, *, limit: int = 10) -> list[DiscoveryResult]:
         cards = [
-            normalize_collection(raw, self.adapter.catalog_url)
+            _normalize_provider_collection(raw, self.adapter.catalog_url)
             for raw in self.adapter.list_collections()
         ]
 
@@ -111,7 +129,7 @@ class ScoutEngine:
         if request.geometry is None:
             raise ValueError("request geometry is required for live verification")
 
-        collection = normalize_collection(
+        collection = _normalize_provider_collection(
             self.adapter.get_collection(collection_id),
             self.adapter.catalog_url,
         )
@@ -125,7 +143,9 @@ class ScoutEngine:
                 collection_failures,
             )
 
-        raw_items = self.adapter.search_items(request, collection_id, max_items=max_items)
+        raw_items = _validate_provider_items(
+            self.adapter.search_items(request, collection_id, max_items=max_items)
+        )
         checks_by_item = [evaluate_item_constraints(item, request) for item in raw_items]
         items = [
             item
