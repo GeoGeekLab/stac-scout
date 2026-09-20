@@ -116,6 +116,10 @@ class CloudAdapter(Adapter):
         return items
 
 
+def _constraint_status(probe: Any, name: str) -> ConstraintStatus:
+    return next(check.status for check in probe.constraints if check.name == name)
+
+
 def test_engine_discovers_and_plans(scout_request: ScoutRequest) -> None:
     engine = ScoutEngine(Adapter())
 
@@ -150,7 +154,7 @@ def test_engine_verify_applies_known_cloud_constraint(
     items, probe = engine.verify(request, "optical")
 
     assert [item["id"] for item in items] == ["scene-1"]
-    assert probe.constraints[0].status is ConstraintStatus.PASS
+    assert _constraint_status(probe, "cloud_cover") is ConstraintStatus.PASS
     assert any("excluded 1 Item" in warning for warning in probe.warnings)
 
 
@@ -163,7 +167,7 @@ def test_engine_verify_preserves_unknown_cloud_constraint(
     items, probe = engine.verify(request, "optical")
 
     assert len(items) == 1
-    assert probe.constraints[0].status is ConstraintStatus.UNKNOWN
+    assert _constraint_status(probe, "cloud_cover") is ConstraintStatus.UNKNOWN
     assert any("unknown cloud cover" in warning for warning in probe.warnings)
 
 
@@ -177,7 +181,7 @@ def test_engine_capped_cloud_search_is_inconclusive(
 
     assert items == []
     assert probe.status is VerificationStatus.INCONCLUSIVE
-    assert probe.constraints[0].status is ConstraintStatus.UNKNOWN
+    assert _constraint_status(probe, "cloud_cover") is ConstraintStatus.UNKNOWN
     assert any("reached its cap" in warning for warning in probe.warnings)
 
 
