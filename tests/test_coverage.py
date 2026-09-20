@@ -82,9 +82,7 @@ def test_coverage_respects_polygon_holes() -> None:
     }
     item_inside_hole = {
         "type": "Polygon",
-        "coordinates": [
-            [[-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5], [-0.5, -0.5]]
-        ],
+        "coordinates": [[[-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5], [-0.5, -0.5]]],
     }
 
     assert coverage_metrics(aoi, item_inside_hole) == (0.0, 0.0)
