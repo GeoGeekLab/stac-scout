@@ -89,7 +89,8 @@ def test_health_reports_malformed_metadata_as_degraded() -> None:
 
 
 def test_health_reports_authentication_failure_as_degraded() -> None:
-    with httpx.Client(transport=httpx.MockTransport(lambda request: httpx.Response(401))) as client:
+    transport = httpx.MockTransport(lambda request: httpx.Response(401))
+    with httpx.Client(transport=transport) as client:
         result = check_provider(
             _provider(),
             client=client,
