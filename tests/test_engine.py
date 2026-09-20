@@ -5,7 +5,13 @@ from typing import Any
 import pytest
 
 from stac_scout.constraints import ConstraintViolationError
-from stac_scout.models import ConstraintStatus, DataType, ScoutRequest, VerificationStatus
+from stac_scout.models import (
+    ConstraintStatus,
+    DataType,
+    ScoutRequest,
+    SearchCompleteness,
+    VerificationStatus,
+)
 from stac_scout.scout import ScoutEngine
 
 
@@ -184,8 +190,11 @@ def test_engine_discovers_and_plans(scout_request: ScoutRequest) -> None:
 
     assert discovery[0].dataset.collection_id == "optical"
     assert planned.probe.items_checked == 1
+    assert planned.probe.search.completeness is SearchCompleteness.COMPLETE
+    assert planned.probe.search.max_items == 100
     assert planned.access_plan.assets == ("red", "nir")
     assert planned.manifest.collection_id == "optical"
+    assert planned.manifest.observation == planned.probe.search
 
 
 def test_engine_filters_hard_constraint_failures_before_ranking(
@@ -247,6 +256,9 @@ def test_engine_capped_cloud_search_is_inconclusive(
 
     assert items == []
     assert probe.status is VerificationStatus.INCONCLUSIVE
+    assert probe.search.completeness is SearchCompleteness.CAPPED
+    assert probe.search.items_observed == 1
+    assert probe.search.items_retained == 0
     assert _constraint_status(probe, "cloud_cover") is ConstraintStatus.UNKNOWN
     assert any("reached its cap" in warning for warning in probe.warnings)
 
