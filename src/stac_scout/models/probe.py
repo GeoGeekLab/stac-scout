@@ -66,10 +66,7 @@ class SearchObservation(BaseModel):
             items_retained=items_retained,
             completeness=SearchCompleteness.CAPPED,
             pagination_exhausted=False,
-            reason=(
-                "Item Search reached the configured result cap; "
-                "additional matching Items may exist"
-            ),
+            reason="Item Search reached the configured result cap; additional matching Items may exist",
         )
 
 
