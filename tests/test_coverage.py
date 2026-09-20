@@ -32,9 +32,7 @@ def test_coverage_handles_unsplit_antimeridian_polygon() -> None:
     }
     item = {
         "type": "Polygon",
-        "coordinates": [
-            [[179.5, -1], [-179.5, -1], [-179.5, 1], [179.5, 1], [179.5, -1]]
-        ],
+        "coordinates": [[[179.5, -1], [-179.5, -1], [-179.5, 1], [179.5, 1], [179.5, -1]]],
     }
 
     coverage, item_fraction = coverage_metrics(aoi, item)
