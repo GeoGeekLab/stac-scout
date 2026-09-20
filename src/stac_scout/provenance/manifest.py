@@ -34,11 +34,7 @@ class ManifestIntegrityError(ValueError):
 
 
 def _canonical_json(value: BaseModel | dict[str, Any]) -> str:
-    payload: Any
-    if isinstance(value, BaseModel):
-        payload = value.model_dump(mode="json")
-    else:
-        payload = value
+    payload: Any = value.model_dump(mode="json") if isinstance(value, BaseModel) else value
     return json.dumps(
         payload,
         ensure_ascii=False,
