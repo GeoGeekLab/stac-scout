@@ -150,7 +150,11 @@ def _selection_reason(
         completeness = "complete" if candidate.gsd_complete else "partial"
         parts.append(f"{completeness} GSD evidence up to {gsd:g} m")
         if max_source_resolution_m is not None:
-            relation = "within" if candidate.gsd_complete and gsd <= max_source_resolution_m else "not proven within"
+            relation = (
+                "within"
+                if candidate.gsd_complete and gsd <= max_source_resolution_m
+                else "not proven within"
+            )
             parts.append(f"{relation} {max_source_resolution_m:g} m source limit")
     else:
         parts.append("GSD unknown")
