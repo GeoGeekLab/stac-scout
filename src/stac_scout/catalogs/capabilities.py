@@ -82,6 +82,8 @@ def _raise_response_error(response: httpx.Response) -> None:
     message = f"provider returned HTTP {status} for {response.request.url}"
     if status in {401, 403}:
         raise ProviderAuthenticationError(message, status_code=status)
+    if status == 408:
+        raise ProviderTimeoutError(message, status_code=status, retryable=True)
     if status == 429:
         raise ProviderRateLimitError(message, status_code=status, retryable=True)
     if 500 <= status <= 599:
