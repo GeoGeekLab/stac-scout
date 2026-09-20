@@ -105,11 +105,13 @@ def _source_fit_rank(candidate: _Candidate, limit_m: float | None) -> int:
         return 1
 
     gsd = candidate.max_gsd_m
-    if gsd is None or not candidate.gsd_complete:
+    if gsd is None:
         return 1
-    if gsd <= limit_m:
+    if gsd > limit_m:
+        return 0
+    if candidate.gsd_complete:
         return 2
-    return 0
+    return 1
 
 
 def _candidate_score(
