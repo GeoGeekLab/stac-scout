@@ -27,11 +27,25 @@ class Evidence(BaseModel):
     observed_at: datetime
 
 
+class AssetChoice(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    measurement: str
+    asset_key: str
+    match_basis: str
+    selection_reason: str
+    gsd_m: float | None = Field(default=None, gt=0)
+    gsd_complete: bool = False
+    resampling: str | None = None
+    resampling_basis: str | None = None
+
+
 class AccessPlan(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     strategy: str
     assets: tuple[str, ...] = ()
+    asset_choices: tuple[AssetChoice, ...] = ()
     estimated_bytes: int | None = Field(default=None, ge=0)
     output_crs: str | None = None
     output_resolution: float | None = Field(default=None, gt=0)
