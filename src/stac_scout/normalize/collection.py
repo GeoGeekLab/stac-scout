@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from stac_scout.models import DataType, DatasetCard
+from stac_scout.models import DatasetCard, DataType
 
 from .assets import normalize_asset
 from .bands import band_definitions, normalize_band
