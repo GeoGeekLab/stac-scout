@@ -8,6 +8,7 @@ import httpx
 
 from stac_scout.catalogs.capabilities import inspect_catalog
 from stac_scout.catalogs.errors import ProviderError
+from stac_scout.catalogs.network import ProviderNetworkPolicy
 from stac_scout.models import ProviderHealth, ProviderHealthStatus, ProviderSpec
 
 
@@ -16,13 +17,19 @@ def check_provider(
     *,
     client: httpx.Client | None = None,
     timeout: float = 10.0,
+    network_policy: ProviderNetworkPolicy | None = None,
     now: Callable[[], datetime] | None = None,
     clock: Callable[[], float] = perf_counter,
 ) -> ProviderHealth:
     checked_at = (now or (lambda: datetime.now(UTC)))()
     started = clock()
     try:
-        capabilities = inspect_catalog(provider.url, client=client, timeout=timeout)
+        capabilities = inspect_catalog(
+            provider.url,
+            client=client,
+            timeout=timeout,
+            network_policy=network_policy,
+        )
     except ProviderError as exc:
         elapsed = max(0.0, (clock() - started) * 1000)
         return ProviderHealth(
@@ -54,5 +61,13 @@ def check_providers(
     providers: Iterable[ProviderSpec],
     *,
     timeout: float = 10.0,
+    network_policy: ProviderNetworkPolicy | None = None,
 ) -> tuple[ProviderHealth, ...]:
-    return tuple(check_provider(provider, timeout=timeout) for provider in providers)
+    return tuple(
+        check_provider(
+            provider,
+            timeout=timeout,
+            network_policy=network_policy,
+        )
+        for provider in providers
+    )
