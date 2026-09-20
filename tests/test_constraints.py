@@ -11,8 +11,8 @@ from stac_scout.models import (
     AccessPolicy,
     BandInfo,
     ConstraintStatus,
-    DataType,
     DatasetCard,
+    DataType,
     ScoutRequest,
 )
 
