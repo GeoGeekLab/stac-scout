@@ -49,9 +49,8 @@ def _validated_items(items: Sequence[Any]) -> list[dict[str, Any]]:
     validated: list[dict[str, Any]] = []
     for index, item in enumerate(items):
         if not isinstance(item, dict):
-            raise ProviderMetadataError(
-                f"provider Item metadata at index {index} is not an object"
-            )
+            message = f"provider Item metadata at index {index} is not an object"
+            raise ProviderMetadataError(message)
         validated.append(item)
     return validated
 
