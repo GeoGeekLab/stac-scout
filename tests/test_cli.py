@@ -110,3 +110,11 @@ def test_discover_rejects_unknown_provider(tmp_path: Path) -> None:
 
     assert result.exit_code != 0
     assert "unknown provider" in result.output
+
+
+def test_federate_help_exposes_execution_bounds() -> None:
+    result = runner.invoke(app, ["federate", "--help"])
+
+    assert result.exit_code == 0
+    assert "--max-workers" in result.stdout
+    assert "--overall-timeout" in result.stdout
