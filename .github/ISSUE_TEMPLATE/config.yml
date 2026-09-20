@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/GeoGeekLab/stac-scout/security
+    about: Do not disclose vulnerabilities, credentials, tokens, or signed URLs in a public issue. Use the repository Security tab and follow SECURITY.md.
