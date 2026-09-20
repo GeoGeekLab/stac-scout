@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from stac_scout.models import AssetChoice
+
 _MATCH_RANK = {
     "band_name": 1,
     "common_name": 2,
