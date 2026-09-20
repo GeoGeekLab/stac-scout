@@ -72,9 +72,12 @@ def _retry_after_seconds(value: str | None) -> float | None:
 
 
 def _backoff_seconds(policy: ProviderNetworkPolicy, attempt: int) -> float:
-    base = policy.backoff_factor_s * (2**attempt)
-    jitter = float(random.uniform(0.0, policy.backoff_jitter_s))
-    return min(policy.max_retry_delay_s, base + jitter)
+    base: float = policy.backoff_factor_s * (2**attempt)
+    jitter: float = float(random.uniform(0.0, policy.backoff_jitter_s))
+    delay: float = base + jitter
+    if delay > policy.max_retry_delay_s:
+        return policy.max_retry_delay_s
+    return delay
 
 
 def _raise_response_error(response: httpx.Response) -> None:
