@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from stac_scout.constraints import evaluate_plan_constraints
 from stac_scout.models import AccessPlan, AvailabilityProbe, ScoutRequest
 
 from .assets import select_asset_keys
@@ -23,6 +24,7 @@ def build_access_plan(
 ) -> tuple[AccessPlan, tuple[str, ...]]:
     asset_keys, missing = select_asset_keys(items, request.required_measurements)
     estimated_bytes = estimate_asset_bytes(items, asset_keys, probe=probe, windowed=True)
+    constraints = evaluate_plan_constraints(estimated_bytes, request)
     resampling = {
         measurement: resampling_for(measurement)
         for measurement in request.required_measurements
@@ -42,6 +44,7 @@ def build_access_plan(
             output_crs=output_crs,
             output_resolution=request.max_spatial_resolution_m,
             resampling=resampling,
+            constraints=constraints,
             notes=tuple(notes),
         ),
         missing,
