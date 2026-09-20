@@ -7,8 +7,8 @@ from stac_scout.models import (
     AccessPolicy,
     ConstraintCheck,
     ConstraintStatus,
-    DataType,
     DatasetCard,
+    DataType,
     ScoutRequest,
 )
 
