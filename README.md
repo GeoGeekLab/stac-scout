@@ -386,8 +386,10 @@ odc-stac recipe
 ```
 
 `max_source_resolution_m` answers “is this source data fine enough?” while
-`target_resolution_m` answers “what output grid should I request?”. Scout never reuses the
-source threshold as an output resampling instruction. The legacy input name
+`target_resolution_m` answers “what output grid should I request?”. It requires an explicit
+`target_crs` whose units are meters (or odc-stac's explicit `"utm"` selector), because odc-stac
+interprets resolution in output-CRS units. Scout never reuses the source threshold as an output
+resampling instruction. The legacy input name
 `max_spatial_resolution_m` is accepted as a source-resolution alias for compatibility.
 
 If multiple assets remain equally supported after semantic, role, coverage, media-type, and GSD
