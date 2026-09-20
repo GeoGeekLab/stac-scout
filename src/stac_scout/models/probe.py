@@ -31,6 +31,16 @@ class SearchObservation(BaseModel):
             raise ValueError("items_retained cannot exceed items_observed")
         if self.max_items is not None and self.items_observed > self.max_items:
             raise ValueError("items_observed cannot exceed max_items")
+        if self.completeness is SearchCompleteness.COMPLETE:
+            if self.max_items is not None and self.items_observed >= self.max_items:
+                raise ValueError("complete search must end before max_items")
+            if self.pagination_exhausted is False:
+                raise ValueError("complete search cannot mark pagination as unexhausted")
+        if self.completeness is SearchCompleteness.CAPPED:
+            if self.max_items is None or self.items_observed != self.max_items:
+                raise ValueError("capped search must observe exactly max_items")
+            if self.pagination_exhausted is True:
+                raise ValueError("capped search cannot prove pagination exhaustion")
         return self
 
     @classmethod
