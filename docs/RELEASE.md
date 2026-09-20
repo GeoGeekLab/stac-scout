@@ -1,6 +1,6 @@
 # Release process
 
-STAC Scout releases are tag-driven and build-once.
+STAC Scout releases are release-branch-driven and build-once.
 
 ## One-time PyPI setup
 
@@ -18,13 +18,13 @@ No long-lived PyPI API token is required or expected.
 ## Release contract
 
 1. Merge a release-ready commit to `main`.
-2. Create tag `vX.Y.Z`, where `X.Y.Z` exactly matches `project.version` in `pyproject.toml`.
-3. The Release workflow reruns deterministic quality gates and evals.
+2. Create branch `release/vX.Y.Z` from that exact `main` commit, where `X.Y.Z` matches `project.version`.
+3. The Release workflow validates the branch/version match and reruns deterministic quality gates and evals.
 4. It builds wheel and sdist exactly once.
 5. It verifies the wheel's version and packaged registry data.
 6. It records SHA-256 checksums and creates GitHub artifact provenance attestations.
 7. The exact built distributions are published to PyPI through OIDC Trusted Publishing.
-8. Only after PyPI succeeds, those same files and checksums are attached to the GitHub Release.
+8. Only after PyPI succeeds, the workflow creates tag `vX.Y.Z` on the same commit and attaches those same files and checksums to the GitHub Release.
 
 A release is incomplete if any of these jobs fails.
 
