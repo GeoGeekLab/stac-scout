@@ -137,6 +137,12 @@ def build_access_plan(
     *,
     output_crs: str | None = None,
 ) -> tuple[AccessPlan, tuple[str, ...]]:
+    if output_crs is not None:
+        if request.target_crs is None:
+            raise ValueError("set target_crs on ScoutRequest instead of passing output_crs")
+        if output_crs.casefold() != request.target_crs.casefold():
+            raise ValueError("output_crs conflicts with request.target_crs")
+
     choices, missing, ambiguous = select_asset_choices(
         items,
         request.required_measurements,
@@ -208,7 +214,7 @@ def build_access_plan(
             assets=asset_keys,
             asset_choices=final_choices,
             estimated_bytes=estimated_bytes,
-            output_crs=output_crs,
+            output_crs=request.target_crs,
             output_resolution=request.target_resolution_m,
             resampling=resampling,
             constraints=constraints,
