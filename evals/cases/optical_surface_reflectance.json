@@ -9,7 +9,7 @@
     },
     "data_type": "optical",
     "required_measurements": ["red", "nir"],
-    "max_spatial_resolution_m": 10,
+    "max_source_resolution_m": 10,
     "access": "open"
   },
   "expectations": {
