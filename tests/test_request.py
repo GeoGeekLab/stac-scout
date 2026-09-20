@@ -118,7 +118,8 @@ def test_request_round_trip() -> None:
         ),
         data_type=DataType.OPTICAL,
         required_measurements=("red", "nir"),
-        max_spatial_resolution_m=10,
+        max_source_resolution_m=10,
+        target_resolution_m=20,
         max_cloud_cover=20,
         access=AccessPolicy.OPEN,
     )
@@ -126,3 +127,40 @@ def test_request_round_trip() -> None:
     restored = ScoutRequest.model_validate_json(request.model_dump_json())
 
     assert restored == request
+    assert restored.max_source_resolution_m == 10
+    assert restored.target_resolution_m == 20
+    assert "max_spatial_resolution_m" not in restored.model_dump()
+
+
+def test_request_accepts_legacy_source_resolution_alias() -> None:
+    request = ScoutRequest.model_validate(
+        {
+            "task": "vegetation analysis",
+            "place": "Singapore",
+            "datetime": {
+                "start": "2026-06-01T00:00:00Z",
+                "end": "2026-06-30T00:00:00Z",
+            },
+            "max_spatial_resolution_m": 30,
+        }
+    )
+
+    assert request.max_source_resolution_m == 30
+    assert request.max_spatial_resolution_m == 30
+    assert "max_spatial_resolution_m" not in request.model_dump()
+
+
+def test_request_rejects_conflicting_resolution_fields() -> None:
+    with pytest.raises(ValidationError, match="use only max_source_resolution_m"):
+        ScoutRequest.model_validate(
+            {
+                "task": "vegetation analysis",
+                "place": "Singapore",
+                "datetime": {
+                    "start": "2026-06-01T00:00:00Z",
+                    "end": "2026-06-30T00:00:00Z",
+                },
+                "max_source_resolution_m": 10,
+                "max_spatial_resolution_m": 30,
+            }
+        )
