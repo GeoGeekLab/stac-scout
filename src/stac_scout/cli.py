@@ -301,7 +301,7 @@ def verify(
     collection: Annotated[str, typer.Option("--collection")],
     catalog: Annotated[str | None, typer.Option("--catalog")] = None,
     provider: Annotated[str | None, typer.Option("--provider")] = None,
-    max_items: Annotated[int, typer.Option(min=1, max=10_000)] = 100,
+    max_items: Annotated[int | None, typer.Option(min=1, max=10_000)] = None,
 ) -> None:
     request = _load_request(request_path)
     try:
@@ -363,9 +363,15 @@ def replay(
     _print_json(
         {
             "probe": result.probe.model_dump(mode="json"),
+            "search": result.search.model_dump(mode="json"),
+            "comparison_status": result.comparison_status.value,
             "retained_item_ids": result.retained_item_ids,
             "missing_item_ids": result.missing_item_ids,
             "new_item_ids": result.new_item_ids,
+            "unresolved_missing_item_ids": result.unresolved_missing_item_ids,
+            "unresolved_new_item_ids": result.unresolved_new_item_ids,
+            "collection_changed": result.collection_changed,
+            "warnings": result.warnings,
         }
     )
 
