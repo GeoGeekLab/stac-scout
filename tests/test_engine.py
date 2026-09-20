@@ -87,7 +87,9 @@ class ModalityAdapter(Adapter):
 
     def get_collection(self, collection_id: str) -> dict[str, Any]:
         return next(
-            collection for collection in self.list_collections() if collection["id"] == collection_id
+            collection
+            for collection in self.list_collections()
+            if collection["id"] == collection_id
         )
 
 
