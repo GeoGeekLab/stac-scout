@@ -206,12 +206,7 @@ def main() -> int:
     validate_federation_cases(federation_cases)
     validate_task_cases(task_cases)
     validate_regression_cases(regression_cases, repo_root)
-    total = (
-        len(request_cases)
-        + len(federation_cases)
-        + len(task_cases)
-        + len(regression_cases)
-    )
+    total = len(request_cases) + len(federation_cases) + len(task_cases) + len(regression_cases)
     print(f"validated {total} evaluation cases")
     return 0
 
