@@ -312,9 +312,7 @@ def evaluate_plan_constraints(
         )
 
     if request.max_source_resolution_m is not None and request.required_measurements:
-        observed_gsd = {
-            choice.measurement: choice.gsd_m for choice in asset_choices
-        }
+        observed_gsd = {choice.measurement: choice.gsd_m for choice in asset_choices}
         failed = tuple(
             choice.measurement
             for choice in asset_choices
