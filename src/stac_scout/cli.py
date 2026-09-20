@@ -301,7 +301,7 @@ def verify(
     collection: Annotated[str, typer.Option("--collection")],
     catalog: Annotated[str | None, typer.Option("--catalog")] = None,
     provider: Annotated[str | None, typer.Option("--provider")] = None,
-    max_items: Annotated[int | None, typer.Option(min=1, max=10_000)] = None,
+    max_items: Annotated[int, typer.Option(min=1, max=10_000)] = 100,
 ) -> None:
     request = _load_request(request_path)
     try:
@@ -352,7 +352,7 @@ def plan(
 @app.command("replay")
 def replay(
     path: Annotated[Path, typer.Argument(exists=True, dir_okay=False, readable=True)],
-    max_items: Annotated[int, typer.Option(min=1, max=10_000)] = 100,
+    max_items: Annotated[int | None, typer.Option(min=1, max=10_000)] = None,
 ) -> None:
     manifest = read_manifest(path)
     result = replay_manifest(
