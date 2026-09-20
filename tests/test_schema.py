@@ -28,6 +28,14 @@ def test_task_advice_schema_command() -> None:
     assert '"title": "TaskAdvice"' in result.stdout
 
 
+def test_manifest_schema_command() -> None:
+    result = runner.invoke(app, ["schema", "manifest"])
+
+    assert result.exit_code == 0
+    assert '"title": "Manifest"' in result.stdout
+    assert '"schema_version"' in result.stdout
+
+
 def test_unknown_schema_fails() -> None:
     result = runner.invoke(app, ["schema", "missing"])
 
