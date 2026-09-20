@@ -49,10 +49,7 @@ def probe_items(
             warnings.append(f"item {item_id} has non-object properties metadata")
 
         cloud_cover = properties.get("eo:cloud_cover")
-        if (
-            not isinstance(cloud_cover, (int, float))
-            or isinstance(cloud_cover, bool)
-        ):
+        if not isinstance(cloud_cover, (int, float)) or isinstance(cloud_cover, bool):
             cloud_cover = None
 
         assets = item.get("assets", {})
