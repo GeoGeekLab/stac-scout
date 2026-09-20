@@ -29,9 +29,25 @@ Task knowledge is intentionally outside prompts so it can be tested, versioned, 
 
 `stac_scout.health` observes endpoint reachability, latency, STAC version, and Item Search support. Health is operational metadata only and never changes scientific dataset scores.
 
+Health distinguishes transport reachability from provider correctness:
+
+- network and timeout failures are `unreachable`;
+- authentication, protocol, capability, and malformed-metadata failures are `degraded`;
+- typed failures expose HTTP status and whether the failure is considered retryable.
+
 ## Provider registry and adapters
 
 `ProviderRegistry` loads packaged provider metadata. Network quirks live behind `CatalogAdapter`.
+
+All built-in adapters can share one `ProviderNetworkPolicy`. The policy defines connect/read
+timeouts, a bounded retry budget, exponential backoff with jitter, a hard retry-delay cap, and
+the transient HTTP statuses eligible for retry. GET and POST are the only retried methods because
+STAC Item Search may use POST while discovery metadata is normally retrieved with GET.
+
+HTTP 408, transport timeouts, and connection failures map to typed network/timeout errors.
+HTTP 429 maps to a typed rate-limit failure and respects `Retry-After` only up to the configured
+maximum delay. Authentication, protocol, capability, and malformed-metadata failures are not
+silently treated as transient network outages.
 
 The Planetary Computer adapter records signing requirements while generated recipes use the official signing SDK.
 
@@ -86,7 +102,12 @@ AOI coverage does not intersect raw longitude/latitude coordinates directly. Pol
 
 ## Federation and identity
 
-`FederatedScout` composes independent catalog engines. One provider failing does not abort the full discovery operation.
+`FederatedScout` composes independent catalog engines. Expected typed provider failures do not abort the full discovery operation.
+
+Federation uses bounded worker concurrency and an overall discovery deadline. Providers still
+running when the deadline expires are reported as retryable `ProviderTimeoutError` failures.
+Unexpected exceptions such as `RuntimeError` are deliberately re-raised instead of being
+misreported as remote-provider outages.
 
 Cross-catalog identity is conservative:
 
