@@ -5,15 +5,25 @@ from typing import Any
 import pytest
 
 from stac_scout.constraints import ConstraintViolationError
-from stac_scout.models import ConstraintStatus, DataType, ScoutRequest, VerificationStatus
+from stac_scout.models import (
+    CatalogCapabilities,
+    ConstraintStatus,
+    DataType,
+    ScoutRequest,
+    VerificationStatus,
+)
 from stac_scout.scout import ScoutEngine
 
 
 class Adapter:
     catalog_url = "https://example.test/stac"
 
-    def inspect(self) -> Any:
-        raise NotImplementedError
+    def inspect(self) -> CatalogCapabilities:
+        return CatalogCapabilities(
+            url=self.catalog_url,
+            stac_version="1.0.0",
+            item_search=True,
+        )
 
     def list_collections(self) -> list[dict[str, Any]]:
         return [
