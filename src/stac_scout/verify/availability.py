@@ -3,7 +3,12 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from stac_scout.models import AvailabilityProbe, ItemEvidence, VerificationStatus
+from stac_scout.models import (
+    AvailabilityProbe,
+    ItemEvidence,
+    SearchObservation,
+    VerificationStatus,
+)
 
 from .coverage import coverage_metrics
 
@@ -20,11 +25,14 @@ def _parse_datetime(value: Any) -> datetime | None:
 def probe_items(
     items: list[dict[str, Any]],
     aoi_geojson: dict[str, Any],
+    *,
+    search: SearchObservation | None = None,
 ) -> AvailabilityProbe:
     if not items:
         return AvailabilityProbe(
             status=VerificationStatus.VERIFIED_EMPTY,
             items_checked=0,
+            search=search or SearchObservation(),
         )
 
     evidence: list[ItemEvidence] = []
@@ -74,5 +82,9 @@ def probe_items(
         items_checked=len(evidence),
         max_coverage_ratio=max_coverage,
         items=tuple(evidence),
+        search=search or SearchObservation(
+            items_observed=len(evidence),
+            items_retained=len(evidence),
+        ),
         warnings=tuple(dict.fromkeys(warnings)),
     )
