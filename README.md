@@ -355,7 +355,7 @@ Scout records:
 - fraction of each Item intersected by the AOI;
 - warnings when geometry or metadata cannot be evaluated.
 
-AOI area is measured geodesically on WGS84 rather than treating longitude/latitude as a flat Cartesian plane.
+AOI coverage normalizes antimeridian-crossing geometry and measures overlap in an AOI-centered WGS84 equal-area projection rather than treating raw longitude/latitude as a flat Cartesian plane.
 
 Because this is geospatial software.
 
@@ -454,7 +454,7 @@ stac-scout/
 │   ├── normalize/         # provider metadata → stable models
 │   ├── planning/          # assets, raster semantics, volume
 │   ├── provenance/        # manifest + replay
-│   ├── verify/            # live evidence + geodesic coverage
+│   ├── verify/            # live evidence + dateline-safe coverage
 │   ├── federation.py
 │   ├── health.py
 │   ├── identity.py
