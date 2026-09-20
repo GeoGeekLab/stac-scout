@@ -37,3 +37,23 @@ Scientific disagreement or incorrect dataset-selection semantics should use the 
 Please give maintainers a reasonable opportunity to investigate and release a fix before publishing exploit details.
 
 The project will avoid claiming a vulnerability is fixed until a regression test or other reproducible verification demonstrates the remediation.
+
+
+## Outbound network trust boundary
+
+The local CLI accepts arbitrary STAC catalog URLs. Treat those URLs as trusted operator input.
+
+For hosted services, agents, notebooks exposed to untrusted users, or any deployment where one
+user can influence another process's outbound requests, catalog URLs are an SSRF boundary.
+Deployments must apply an outbound-network policy appropriate to their environment, including:
+
+- allowlisting approved catalog hosts when practical;
+- rejecting loopback, link-local, private-network, and cloud-metadata destinations unless they
+  are explicitly required;
+- re-validating redirect targets instead of assuming the original host remains authoritative;
+- accounting for DNS rebinding and hostname-to-private-address resolution;
+- keeping credentials and provider signing material scoped to the intended host;
+- retaining the library's bounded connect/read timeouts and retry limits.
+
+STAC Scout does not claim to be a network sandbox. A hosted wrapper is responsible for enforcing
+its own egress and tenancy policy before passing an arbitrary catalog URL to the library.
