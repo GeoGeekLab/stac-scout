@@ -4,7 +4,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 
-from stac_scout.catalogs import CatalogAdapter, ProviderMetadataError
+from stac_scout.catalogs import CatalogAdapter, ProviderError, ProviderMetadataError
 from stac_scout.constraints import (
     ConstraintViolationError,
     evaluate_constraints,
@@ -17,11 +17,14 @@ from stac_scout.models import (
     AccessPlan,
     AssetSigning,
     AvailabilityProbe,
+    CatalogCapabilities,
     ConstraintCheck,
     ConstraintStatus,
     DatasetCard,
     Manifest,
     ScoutRequest,
+    SearchCompleteness,
+    SearchObservation,
     VerificationStatus,
 )
 from stac_scout.normalize import normalize_collection
@@ -43,6 +46,15 @@ class PlannedDataset:
     access_plan: AccessPlan
     manifest: Manifest
     missing_measurements: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class _VerificationContext:
+    collection: DatasetCard
+    raw_items: list[dict[str, Any]]
+    items: list[dict[str, Any]]
+    probe: AvailabilityProbe
+    search: SearchObservation
 
 
 def _normalize_provider_collection(raw: dict[str, Any], catalog_url: str) -> DatasetCard:
@@ -121,13 +133,13 @@ class ScoutEngine:
             for entry in ranked[:limit]
         ]
 
-    def verify(
+    def _verify_context(
         self,
         request: ScoutRequest,
         collection_id: str,
         *,
         max_items: int = 100,
-    ) -> tuple[list[dict[str, Any]], AvailabilityProbe]:
+    ) -> _VerificationContext:
         if request.geometry is None:
             raise ValueError("request geometry is required for live verification")
 
@@ -214,7 +226,53 @@ class ScoutEngine:
                 "warnings": tuple(dict.fromkeys((*probe.warnings, *warnings))),
             }
         )
-        return items, probe
+
+        if len(raw_items) < max_items:
+            completeness = SearchCompleteness.COMPLETE
+        elif len(raw_items) == max_items:
+            completeness = SearchCompleteness.LIMIT_REACHED
+        else:
+            completeness = SearchCompleteness.UNKNOWN
+            probe = probe.model_copy(
+                update={
+                    "warnings": tuple(
+                        dict.fromkeys(
+                            (
+                                *probe.warnings,
+                                "provider returned more Items than the requested max_items limit",
+                            )
+                        )
+                    )
+                }
+            )
+
+        search = SearchObservation(
+            max_items=max_items,
+            returned_items=len(raw_items),
+            accepted_items=len(items),
+            completeness=completeness,
+        )
+        return _VerificationContext(
+            collection=collection,
+            raw_items=raw_items,
+            items=items,
+            probe=probe,
+            search=search,
+        )
+
+    def verify(
+        self,
+        request: ScoutRequest,
+        collection_id: str,
+        *,
+        max_items: int = 100,
+    ) -> tuple[list[dict[str, Any]], AvailabilityProbe]:
+        context = self._verify_context(
+            request,
+            collection_id,
+            max_items=max_items,
+        )
+        return context.items, context.probe
 
     def plan(
         self,
@@ -224,7 +282,13 @@ class ScoutEngine:
         max_items: int = 100,
         output_crs: str | None = None,
     ) -> PlannedDataset:
-        items, probe = self.verify(request, collection_id, max_items=max_items)
+        context = self._verify_context(
+            request,
+            collection_id,
+            max_items=max_items,
+        )
+        items = context.items
+        probe = context.probe
 
         verification_failures = tuple(
             check for check in probe.constraints if check.status is ConstraintStatus.FAIL
@@ -271,6 +335,16 @@ class ScoutEngine:
         if not isinstance(asset_signing, AssetSigning):
             asset_signing = AssetSigning.NONE
 
+        catalog_capabilities: CatalogCapabilities | None = None
+        manifest_warnings: list[str] = []
+        try:
+            catalog_capabilities = self.adapter.inspect()
+        except ProviderError as exc:
+            manifest_warnings.append(
+                "catalog capabilities were not captured: "
+                f"{type(exc).__name__}: {exc}"
+            )
+
         manifest = build_manifest(
             request,
             catalog_url=self.adapter.catalog_url,
@@ -279,6 +353,11 @@ class ScoutEngine:
             asset_signing=asset_signing,
             probe=probe,
             access_plan=access_plan,
+            search=context.search,
+            collection=context.collection,
+            catalog_capabilities=catalog_capabilities,
+            items=context.items,
+            additional_warnings=manifest_warnings,
         )
         return PlannedDataset(
             probe=probe,
