@@ -181,9 +181,10 @@ def build_access_plan(
     if missing:
         notes.append(f"unresolved measurements with no matching asset: {', '.join(missing)}")
     if ambiguous:
+        ambiguous_names = ", ".join(ambiguous)
         notes.append(
-            "ambiguous asset selection; no lexicographic fallback used for: "
-            + ", ".join(ambiguous)
+            f"ambiguous asset selection; no lexicographic fallback used for: "
+            f"{ambiguous_names}"
         )
 
     incomplete = tuple(
