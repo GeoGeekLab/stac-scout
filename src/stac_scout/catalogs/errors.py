@@ -69,6 +69,12 @@ def provider_error_from_api_error(exc: APIError) -> ProviderError:
 
     if status_code in {401, 403}:
         return ProviderAuthenticationError(message, status_code=status_code)
+    if status_code == 408:
+        return ProviderTimeoutError(
+            message,
+            status_code=status_code,
+            retryable=True,
+        )
     if status_code == 429:
         return ProviderRateLimitError(
             message,
