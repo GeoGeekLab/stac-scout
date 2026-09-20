@@ -90,6 +90,36 @@ def test_generic_adapter_maps_malformed_record_to_metadata_error() -> None:
         list(adapter.list_collections())
 
 
+def test_generic_adapter_rejects_non_record_collection_metadata() -> None:
+    class NonRecordClient(Client):
+        def get_collections(self) -> list[Any]:
+            return [object()]
+
+    adapter = GenericStacAdapter(
+        "https://example.test/stac",
+        client_factory=lambda _: NonRecordClient(),
+    )
+
+    with pytest.raises(ProviderMetadataError, match="to_dict"):
+        list(adapter.list_collections())
+
+
+def test_generic_adapter_does_not_mask_search_call_type_error(
+    scout_request: ScoutRequest,
+) -> None:
+    class BuggySearchClient(Client):
+        def search(self, **kwargs: Any) -> Search:
+            raise TypeError("internal search call bug")
+
+    adapter = GenericStacAdapter(
+        "https://example.test/stac",
+        client_factory=lambda _: BuggySearchClient(),
+    )
+
+    with pytest.raises(TypeError, match="internal search call bug"):
+        adapter.search_items(scout_request, "collection-1")
+
+
 def test_generic_adapter_maps_unsupported_search_to_capability_error(
     scout_request: ScoutRequest,
 ) -> None:
