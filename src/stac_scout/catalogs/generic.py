@@ -81,7 +81,7 @@ class GenericStacAdapter:
     def inspect(self) -> CatalogCapabilities:
         return inspect_catalog(
             self.catalog_url,
-            timeout=self.network_policy.read_timeout_s,
+            network_policy=self.network_policy,
         )
 
     def list_collections(self) -> Iterable[dict[str, Any]]:
