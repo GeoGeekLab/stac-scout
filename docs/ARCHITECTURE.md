@@ -98,7 +98,18 @@ Only exact groups are marked safe to collapse.
 
 ## Planning and provenance
 
-Planning resolves requested measurements against declared asset and band metadata. It does not invent aliases.
+Planning resolves requested measurements against declared asset and band metadata. It does not invent aliases or use asset-key alphabetical order as a semantic tie-breaker.
+
+Asset selection ranks explicit evidence: source-resolution fit, presence across inspected Items, asset roles, key/band semantic match, raster media type, and declared GSD. A completely tied result remains ambiguous and blocks an executable plan rather than being guessed.
+
+Source and output resolution are separate contracts:
+
+- `max_source_resolution_m` is a hard suitability constraint on source data;
+- `target_resolution_m` is an explicit requested output grid resolution;
+- the legacy input key `max_spatial_resolution_m` is accepted only as an alias for `max_source_resolution_m`;
+- a source-resolution threshold is never reused as output resolution.
+
+Resampling is also evidence-driven. Classification metadata and mask/quality roles select nearest-neighbor; known continuous measurement semantics select bilinear. Unknown semantics remain unresolved instead of silently defaulting to bilinear.
 
 A manifest records request, provider, collection, item IDs, selected assets, signing strategy, query, warnings, and Scout version. Replay performs a fresh search and reports item-set drift.
 
