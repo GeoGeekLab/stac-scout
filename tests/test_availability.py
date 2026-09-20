@@ -44,3 +44,23 @@ def test_probe_items_tolerates_invalid_metadata(aoi: dict[str, object]) -> None:
     assert probe.items[0].datetime is None
     assert probe.items[0].cloud_cover is None
     assert probe.items[0].asset_keys == ()
+
+
+def test_probe_items_degrades_non_object_properties_to_warning(
+    aoi: dict[str, object],
+) -> None:
+    items = [
+        {
+            "id": "broken-properties",
+            "geometry": aoi,
+            "properties": [],
+            "assets": {},
+        }
+    ]
+
+    probe = probe_items(items, aoi)
+
+    assert probe.status is VerificationStatus.VERIFIED_AVAILABLE
+    assert probe.items[0].datetime is None
+    assert probe.items[0].cloud_cover is None
+    assert any("non-object properties" in warning for warning in probe.warnings)
