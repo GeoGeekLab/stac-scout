@@ -19,6 +19,7 @@ from .provider import (
 )
 from .report import (
     AccessPlan,
+    AssetChoice,
     CandidateAssessment,
     DecisionReport,
     Evidence,
@@ -37,6 +38,7 @@ from .task import (
 __all__ = [
     "AccessPlan",
     "AccessPolicy",
+    "AssetChoice",
     "AssetInfo",
     "AssetSigning",
     "AvailabilityProbe",
