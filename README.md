@@ -2,147 +2,67 @@
 
 # STAC Scout
 
-**Find the data. Prove it exists. Know what you're getting.**
+---
 
-`intent → task semantics → catalog federation → live item evidence → asset plan → manifest`
+**Scout STAC catalogs before you commit the compute.**
 
-[![CI](https://github.com/GeoGeekLab/stac-scout/actions/workflows/ci.yml/badge.svg)](https://github.com/GeoGeekLab/stac-scout/actions/workflows/ci.yml)
-[![Python](https://img.shields.io/badge/Python-3.12%20%7C%203.13%20%7C%203.14-3776AB?style=flat-square&logo=python&logoColor=white)](.github/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-2ea44f?style=flat-square)](LICENSE)
-[![STAC](https://img.shields.io/badge/STAC-evidence--first-111111?style=flat-square)](https://stacspec.org/)
+A Python CLI for finding suitable datasets, checking real Items, choosing assets,
+planning raster reads, and replaying the result later.
 
-A deterministic decision layer for the STAC ecosystem.
+[![CI](https://img.shields.io/github/actions/workflow/status/GeoGeekLab/stac-scout/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/GeoGeekLab/stac-scout/actions/workflows/ci.yml)
+[![release](https://img.shields.io/github/v/release/GeoGeekLab/stac-scout?style=flat-square&color=f97316)](https://github.com/GeoGeekLab/stac-scout/releases)
+[![PyPI](https://img.shields.io/pypi/v/stac-scout?style=flat-square&color=2563eb)](https://pypi.org/project/stac-scout/)
+[![license](https://img.shields.io/badge/license-MIT-16a34a?style=flat-square)](LICENSE)
+[![python](https://img.shields.io/pypi/pyversions/stac-scout?style=flat-square&logo=python&logoColor=white)](https://pypi.org/project/stac-scout/)
+[![typing](https://img.shields.io/badge/typing-strict-2563eb?style=flat-square)](pyproject.toml)
+
+[Quickstart](#quickstart) ·
+[Workflow](#workflow) ·
+[Tasks](#task-intelligence) ·
+[Providers](#providers) ·
+[Planning](#asset-and-raster-planning) ·
+[Replay](#manifests-and-replay) ·
+[Examples](examples/) ·
+[Contributing](CONTRIBUTING.md) ·
+[Security](SECURITY.md) ·
+[Releases](https://github.com/GeoGeekLab/stac-scout/releases)
+
+<br>
+
+<img src="docs/assets/mascot/scout-hero.webp" width="300" alt="Scout, the STAC Scout mascot">
+
+**Find it. Verify it. Plan it. Replay it.**
 
 </div>
 
-## STAC is syntax. Dataset choice is semantics.
+## What is STAC Scout?
 
-A model can generate a valid STAC query.
+STAC Scout is a small decision layer for STAC workflows.
 
-That does not mean it chose the right dataset.
+It helps answer the questions that usually show up between "I found a Collection" and
+"my pipeline is ready to run":
 
-A Collection can advertise the right spatial and temporal extent.
+- Which collections match the task and the hard constraints?
+- Do matching Items actually exist for this AOI and time window?
+- Which assets should be loaded?
+- What resolution, CRS, resampling, and approximate transfer size should the read use?
+- Can the same choice be inspected again after the catalog changes?
 
-That does not mean an Item actually exists for your AOI and date.
+Scout works with normal STAC APIs. It does not replace
+[pystac-client](https://github.com/stac-utils/pystac-client),
+[odc-stac](https://github.com/opendatacube/odc-stac), or the provider itself.
 
-An asset can be called `B08`.
+## Quickstart
 
-That does not mean a caller should silently assume what it contains.
-
-STAC Scout lives in that gap.
-
-```text
-"find imagery for this task"
-            │
-            ▼
-      what does the task need?
-            │
-            ▼
-      which datasets fit?
-            │
-            ▼
-      do matching items exist?
-            │
-            ▼
-      which assets are actually required?
-            │
-            ▼
-      how much data will this read?
-            │
-            ▼
-      can the decision be replayed?
-```
-
-The operating rule is simple:
-
-> **Never infer what can be inspected.**
-
-## What Scout actually does
-
-```text
-natural language / structured request
-              │
-              ▼
-         IntentDraft
-              │
-        task_type + facts
-              ▼
-     ┌───────────────────┐
-     │    TaskAdvisor   │◄──── versioned task rules
-     └────────┬─────────┘
-              │
-              ▼
-        ScoutRequest
-              │
-      ┌───────┴────────┐
-      │                │
-      ▼                ▼
- ScoutEngine     FederatedScout
-      │                │
-      │         provider isolation
-      │         dataset identity
-      │         duplicate evidence
-      │         explicit failures
-      │                │
-      └───────┬────────┘
-              ▼
-         live Item probe
-              │
-        AOI coverage
-              │
-         asset semantics
-              │
-         access planning
-              │
-              ▼
-      manifest + replay
-```
-
-Scout does **not** replace `pystac-client`, `odc-stac`, or a STAC API.
-
-It decides what should be asked, checks what came back, and records why.
-
-## The invariants
-
-These are not style preferences. They are the contract.
-
-- **Collection metadata is not availability evidence.** Item Search is.
-- **`intersects` is not AOI coverage.**
-- **Unknown is not false.**
-- **Required and preferred measurements are different things.**
-- **Task rules do not invent dates.**
-- **Explicit user constraints beat defaults.**
-- **Probable duplicates stay visible.**
-- **Provider health is not scientific quality.**
-- **A language model may classify intent; it does not own geospatial truth.**
-- **Every useful decision should be reproducible.**
-
-Or shorter:
-
-```text
-metadata ≠ evidence
-similarity ≠ identity
-availability ≠ suitability
-confidence ≠ proof
-```
-
-## Install
+Install from PyPI:
 
 ```bash
 python -m pip install stac-scout
 ```
 
-Python 3.12 or newer is required. Python 3.12, 3.13, and 3.14 are tested in CI.
+Python 3.12, 3.13, and 3.14 are tested in CI.
 
-For Planetary Computer access recipes:
-
-```bash
-python -m pip install "stac-scout[planetary-computer]"
-```
-
-## 60-second first success
-
-This first check is deterministic and does not call a remote catalog:
+Create a request:
 
 ```bash
 cat > request.json <<'JSON'
@@ -155,302 +75,212 @@ cat > request.json <<'JSON'
   }
 }
 JSON
+```
 
+Ask Scout what the task needs:
+
+```bash
 stac-scout advise request.json --task wildfire_impact
 ```
 
-The important part of the output is the decision contract, not prose:
+The task profile adds the dataset requirements it can derive and reports anything that still
+needs to come from the caller.
 
-```json
-{
-  "data_type": "optical",
-  "required_measurements": ["nir", "swir22"],
-  "follow_up_requirements": ["comparison_windows"]
-}
+Then move on to live catalogs:
+
+```bash
+stac-scout federate request.json
+
+stac-scout verify request.json \
+  --provider earth-search \
+  --collection sentinel-2-l2a
+
+stac-scout plan request.json \
+  --provider earth-search \
+  --collection sentinel-2-l2a \
+  --manifest scout.manifest.json \
+  --recipe load.py
+
+stac-scout replay scout.manifest.json
 ```
 
-Scout derives the optical/NIR/SWIR2 requirement but refuses to invent the missing comparison
-window. For a live Item-to-manifest walkthrough, see
+For a complete runnable walkthrough, see
 [`examples/wildfire-impact/`](examples/wildfire-impact/).
 
-## Geo Task Intelligence
+## Workflow
 
-![Geo Task Intelligence workflow](docs/assets/geo-task-intelligence.svg)
+Scout deliberately keeps the workflow boring and inspectable:
 
-The user often knows the problem, not the bands.
+| Stage | CLI | What you get |
+| --- | --- | --- |
+| **Find** | `discover`, `federate` | candidate collections from one or more catalogs |
+| **Verify** | `verify` | matching Items, timestamps, footprints, asset keys, cloud metadata when present |
+| **Plan** | `plan` | selected assets, raster settings, estimated bytes, manifest, optional load recipe |
+| **Replay** | `replay` | comparison against the saved manifest and current catalog state |
 
-```text
-"assess wildfire impact"
-        ↓
-optical
-        ↓
-NIR + SWIR2 required
-        ↓
-surface reflectance preferred
-        ↓
-before/after strategy
-        ↓
-comparison_windows still required from the user
+Typical single-provider run:
+
+```bash
+stac-scout discover request.json --provider earth-search
+stac-scout verify request.json --provider earth-search --collection sentinel-2-l2a
+stac-scout plan request.json --provider earth-search --collection sentinel-2-l2a
 ```
 
-Scout keeps that knowledge in a versioned, inspectable registry instead of hiding it in prompts.
+Typical multi-provider run:
 
-List the built-in task archetypes:
+```bash
+stac-scout federate request.json --max-workers 4 --overall-timeout 30
+```
+
+## Task intelligence
+
+Users usually know the job before they know the bands.
+
+Scout ships versioned task profiles for common geospatial workflows:
 
 ```bash
 stac-scout tasks
 stac-scout task-profile wildfire_impact
 ```
 
-Derive task-aware data requirements:
+A profile can define:
+
+- optical or SAR modality;
+- required and preferred measurements;
+- temporal strategy;
+- processing preferences;
+- mask preferences;
+- short scientific rationale and sources.
+
+Apply one to a request:
 
 ```bash
 stac-scout advise request.json --task wildfire_impact
 ```
 
-The output includes:
+For example, the wildfire profile requires NIR and SWIR2 and uses a before/after strategy.
+If the comparison windows are not in the request, Scout asks for them instead of making them up.
 
-```text
-TaskProfile
-├── rule_id
-├── rationale
-├── sources
-├── required measurements
-├── preferred measurements
-├── temporal strategy
-├── processing preferences
-└── mask preferences
+Task rules live in
+[`src/stac_scout/data/tasks.toml`](src/stac_scout/data/tasks.toml), with notes in
+[`docs/TASK_RULES.md`](docs/TASK_RULES.md).
 
-TaskAdvice
-├── enriched ScoutRequest
-├── derivations[]
-│   ├── rule_id
-│   ├── field
-│   ├── value
-│   ├── required | preferred
-│   └── rationale
-├── follow_up_requirements[]
-└── notes[]
-```
+## Providers
 
-Task rules live in:
+The built-in provider registry currently enables:
 
-```text
-src/stac_scout/data/tasks.toml
-```
+- **Element 84 Earth Search**
+- **Microsoft Planetary Computer**
 
-The scientific basis and rule boundaries are documented in [`docs/TASK_RULES.md`](docs/TASK_RULES.md).
-
-### Rules are allowed to say "I don't know"
-
-For example, a before/after wildfire task does **not** cause Scout to hallucinate a pre-fire window.
-
-It returns:
-
-```json
-{
-  "follow_up_requirements": ["comparison_windows"]
-}
-```
-
-Likewise, if the user explicitly asks for SAR while a task's default modality is optical, Scout preserves SAR and skips incompatible optical band defaults.
-
-No spectral fan fiction.
-
-## Intent boundary
-
-STAC Scout deliberately does not ship an LLM SDK in the core package.
-
-Any structured-output model can produce an `IntentDraft`.
-
-Get the contract:
-
-```bash
-stac-scout intent-contract
-stac-scout schema intent
-```
-
-The model may identify a supported `task_type`.
-
-It is explicitly told **not** to invent:
-
-- coordinates;
-- dates;
-- dataset names;
-- measurement names;
-- hidden constraints.
-
-Those belong to deterministic code, explicit user input, or live metadata.
-
-Resolve an intent directly:
-
-```bash
-stac-scout resolve-intent intent.json
-```
-
-Resolve it and apply task intelligence:
-
-```bash
-stac-scout advise-intent intent.json
-```
-
-If required information is still ambiguous, the draft stays unresolved.
-
-That is a feature.
-
-## Providers are adapters, not assumptions
-
-List the built-in provider registry:
+List providers:
 
 ```bash
 stac-scout providers
 stac-scout providers --all
 ```
 
-Check operational health:
+Check connectivity and adapter health:
 
 ```bash
 stac-scout health
 stac-scout health --provider earth-search
 ```
 
-The default enabled providers are:
-
-- Element 84 Earth Search
-- Microsoft Planetary Computer
-
-Provider quirks stay behind adapters.
-
-Planetary Computer signing is recorded explicitly and generated recipes use the official `planetary_computer.sign_inplace` path instead of reimplementing SAS handling.
-
-Provider latency and uptime are reported as operational evidence only.
-
-Network behavior is bounded: adapters use explicit connect/read timeouts, a finite transient-retry
-budget, capped backoff/Retry-After delays, and typed provider errors. A reachable provider with
-invalid metadata is reported as degraded rather than falsely labeled unreachable.
-
-A slow endpoint does not make a scientifically suitable dataset worse.
-
-## Federation without pretending everything is the same
-
-Search a single provider:
-
-```bash
-stac-scout discover request.json --provider earth-search
-```
-
-Or a raw STAC endpoint:
+You can also point Scout at a raw STAC API:
 
 ```bash
 stac-scout discover request.json \
   --catalog https://earth-search.aws.element84.com/v1
 ```
 
-Search across enabled providers:
+Provider-specific behavior stays behind adapters, including Planetary Computer signing.
+
+## Federation
+
+`federate` searches enabled providers concurrently and keeps provider failures separate.
 
 ```bash
-stac-scout federate request.json
-stac-scout federate request.json --max-workers 4 --overall-timeout 30
+stac-scout federate request.json \
+  --max-workers 4 \
+  --overall-timeout 30
 ```
 
-Federation isolates expected provider failures such as timeouts, rate limits, authentication
-errors, malformed metadata, and unsupported capabilities. Each failure reports its type, HTTP
-status when known, and whether retry is reasonable. Unexpected internal exceptions are not
-converted into provider failures.
+Duplicate grouping is conservative:
 
-Dataset identity is conservative:
+- DOI match → exact identity;
+- matching collection/platform/constellation/instrument metadata → probable identity;
+- otherwise → local to that catalog.
 
-```text
-sci:doi
-  → exact
+Probable matches remain visible instead of being silently collapsed.
 
-collection id + platform / constellation / instrument evidence
-  → probable
+## Verification
 
-everything else
-  → local to that catalog
-```
-
-Only exact groups are considered safe to collapse.
-
-Probable matches stay visible.
-
-Because two catalogs agreeing on a name is not the same thing as two catalogs describing the same scientific product.
-
-## The catalog says maybe. Items say yes or no.
-
-Verification is item-level.
+Collection metadata is useful for discovery. Item Search is what tells you whether the requested
+scene is there.
 
 ```bash
 stac-scout verify request.json \
   --provider earth-search \
-  --collection sentinel-2-l2a
+  --collection sentinel-2-l2a \
+  --max-items 20
 ```
 
-Scout records:
+Verification reports, when available:
 
-- matching Item count;
-- Item IDs;
-- timestamps;
+- Item IDs and datetimes;
+- AOI coverage;
 - asset keys;
-- cloud metadata when available;
-- AOI coverage ratio;
-- fraction of each Item intersected by the AOI;
-- warnings when geometry or metadata cannot be evaluated.
+- cloud metadata;
+- provider warnings;
+- whether the search hit its Item limit.
 
-AOI coverage normalizes antimeridian-crossing geometry and measures overlap in an AOI-centered WGS84 equal-area projection rather than treating raw longitude/latitude as a flat Cartesian plane.
+AOI coverage handles antimeridian-crossing and high-latitude geometry without treating raw
+longitude/latitude as a flat Cartesian grid.
 
-Because this is geospatial software.
+## Asset and raster planning
 
-## Asset planning
-
-A scientifically correct Collection can still produce a bad access plan.
-
-Scout resolves requested measurements against declared asset and band metadata rather than guessing asset names.
+`plan` turns a verified collection into an explicit read plan.
 
 ```bash
 stac-scout plan request.json \
   --provider earth-search \
   --collection sentinel-2-l2a \
+  --max-items 20 \
   --manifest scout.manifest.json \
   --recipe load.py
 ```
 
-Planning can produce:
+The access plan can include:
+
+- measurement → asset mapping;
+- why an asset was selected;
+- categorical vs continuous resampling choice;
+- source GSD checks;
+- target CRS and output resolution;
+- provider signing requirements;
+- estimated transfer bytes when `file:size` is available.
+
+Source and output resolution are separate settings:
 
 ```text
-measurement → asset + selection evidence
-resampling strategy + evidence
-windowed-read estimate
-explicit target output resolution
-provider signing requirements
-warnings
-odc-stac recipe
+max_source_resolution_m  # "is the source detailed enough?"
+target_resolution_m      # "what output grid should I request?"
+target_crs               # projected CRS or "utm"
 ```
 
-`max_source_resolution_m` answers “is this source data fine enough?” while
-`target_resolution_m` answers “what output grid should I request?”. It requires an explicit
-`target_crs` whose units are meters (or odc-stac's explicit `"utm"` selector), because odc-stac
-interprets resolution in output-CRS units. Scout never reuses the source threshold as an output
-resampling instruction. The legacy input name
-`max_spatial_resolution_m` is accepted as a source-resolution alias for compatibility.
+If asset metadata is genuinely ambiguous, the plan stays unresolved instead of choosing a key
+alphabetically.
 
-If multiple assets remain equally supported after semantic, role, coverage, media-type, and GSD
-evidence, Scout reports the selection as ambiguous instead of choosing the alphabetically first
-key. Unknown resampling semantics likewise remain unresolved rather than defaulting to bilinear.
+## Manifests and replay
 
-When `file:size` exists, Scout estimates transfer volume from the AOI/item intersection fraction.
+A plan can be saved as a versioned manifest:
 
-It is an estimate, not a bandwidth prophecy.
-
-## Manifests: because catalogs move
-
-A successful query today is not a frozen scientific record.
-
-Scout writes a versioned provenance manifest containing the canonical request/query,
-provider/catalog identity, search limit and completeness, Collection fingerprint, full access
-plan, selected-asset metadata, and the observed decision-matching Item set. Ephemeral asset URLs
-are not copied into the provenance snapshot.
+```bash
+stac-scout plan request.json \
+  --provider earth-search \
+  --collection sentinel-2-l2a \
+  --manifest scout.manifest.json
+```
 
 Replay it later:
 
@@ -458,49 +288,41 @@ Replay it later:
 stac-scout replay scout.manifest.json
 ```
 
-By default replay reuses the manifest's recorded `max_items`. You can override it explicitly,
-but Scout records that the limits differ.
+The manifest records the request, provider/catalog identity, search limit/completeness,
+collection fingerprint, selected Item IDs, asset metadata needed by the plan, output settings,
+warnings, and assumptions.
 
-Replay reports:
+Replay reports retained, missing, new, and unresolved Item IDs plus collection metadata changes.
 
-```text
-comparison status: complete / partial / inconclusive
-retained Item IDs
-confirmed missing Item IDs
-confirmed new Item IDs
-unresolved missing Item IDs
-unresolved new Item IDs
-Collection metadata changed: true / false / unknown
-```
+A capped search is not treated as a complete catalog snapshot.
 
-A search that returns exactly `max_items` is marked `limit_reached`, not assumed complete or
-definitely truncated. If either historical or current completeness cannot be proven, Scout will
-not promote ordering/sample differences into confirmed drift.
+## A few opinions
 
-The manifest is evidence of the decision.
+Scout is intentionally opinionated about a small number of things:
 
-It is not a copy of the remote data.
+- hard constraints are checked before ranking;
+- missing metadata stays unknown;
+- an Item limit is not proof that the search was complete;
+- explicit user choices beat task defaults.
 
-## CLI map
+That is most of the philosophy. The rest is code and tests.
+
+## CLI
 
 ```text
 stac-scout
 ├── version
 ├── validate-request
 ├── schema
-│
 ├── intent-contract
 ├── resolve-intent
 ├── advise-intent
-│
 ├── tasks
 ├── task-profile
 ├── advise
-│
 ├── providers
 ├── health
 ├── inspect-catalog
-│
 ├── discover
 ├── federate
 ├── verify
@@ -508,86 +330,57 @@ stac-scout
 └── replay
 ```
 
-## Repository map
-
-```text
-stac-scout/
-├── src/stac_scout/
-│   ├── catalogs/          # STAC access boundary
-│   ├── data/
-│   │   ├── providers.toml
-│   │   └── tasks.toml
-│   ├── discovery/         # candidate retrieval
-│   ├── models/            # strict contracts
-│   ├── normalize/         # provider metadata → stable models
-│   ├── planning/          # assets, raster semantics, volume
-│   ├── provenance/        # manifest + replay
-│   ├── verify/            # live evidence + dateline-safe coverage
-│   ├── federation.py
-│   ├── health.py
-│   ├── identity.py
-│   ├── reasoning.py
-│   ├── scout.py
-│   ├── tasking.py
-│   └── tasks.py
-├── evals/
-│   ├── cases/
-│   ├── federation_cases/
-│   ├── task_cases/
-│   ├── regression_matrix.json
-│   ├── runner.py
-│   └── live.py
-├── examples/
-│   └── wildfire-impact/
-├── docs/
-│   ├── ARCHITECTURE.md
-│   └── TASK_RULES.md
-├── skill/
-│   └── SKILL.md
-└── tests/
-```
-
-## Evals over vibes
-
-The deterministic evaluation corpus checks contracts that affect dataset decisions:
+Use `--help` on any command:
 
 ```bash
-python evals/runner.py
+stac-scout --help
+stac-scout plan --help
 ```
 
-It covers request invariants, modality mismatches, cloud PASS/FAIL/UNKNOWN, required versus
-preferred measurements, DOI identity strength, multiple extents, antimeridian/polar AOIs,
-empty and >100 Item behavior, provider timeout/429/partial failure, categorical resampling,
-missing `file:size`, volume budgets, task/user conflicts, malformed provider metadata,
-cross-provider identity, task derivation, temporal strategy, and follow-up requirements.
+## Examples
 
-`evals/regression_matrix.json` binds the hardening acceptance scenarios to concrete pytest node
-IDs, so removing a required regression causes the eval runner to fail.
+### Wildfire impact
 
-Remote providers are intentionally kept out of ordinary CI.
+[`examples/wildfire-impact/`](examples/wildfire-impact/) follows a real Lahaina use case through:
 
-Live checks run separately:
+1. task requirements;
+2. provider federation;
+3. live Item verification;
+4. asset selection;
+5. volume estimation;
+6. manifest generation;
+7. replay.
+
+Remote catalog contents can change, so the example documents the workflow rather than pinning a
+magic Item count.
+
+## Intent integration
+
+The core package does not depend on an LLM SDK.
+
+If another system produces structured user intent, use the built-in contract:
 
 ```bash
-python evals/live.py
+stac-scout intent-contract
+stac-scout schema intent
+stac-scout resolve-intent intent.json
+stac-scout advise-intent intent.json
 ```
 
-That separation is deliberate:
-
-```text
-deterministic behavior
-  → CI gate
-
-remote catalog state
-  → live observation
-```
+The rest of the pipeline is the same CLI and model layer used by hand-written requests.
 
 ## Development
 
-Contributor installs are editable; normal users should use the PyPI command above.
+<img src="docs/assets/mascot/scout-terminal.webp" width="420" align="right" alt="Scout working at a geospatial developer terminal">
+
+Scout is happiest when the tests are boring.
 
 ```bash
+git clone https://github.com/GeoGeekLab/stac-scout.git
+cd stac-scout
+
 python -m pip install -e ".[dev]"
+
 ruff check .
 ruff format --check .
 mypy
@@ -596,41 +389,71 @@ python evals/runner.py
 python -m build
 ```
 
-CI runs on Python 3.12, 3.13, and 3.14. Python 3.15 prereleases are exercised as a non-blocking compatibility signal before the final 3.15 release.
+CI runs the deterministic suite on Python 3.12, 3.13, and 3.14. Python 3.15 prereleases are used
+as a non-blocking compatibility signal.
 
-Coverage must stay at or above 90%.
+Remote provider checks are separate:
 
-The wheel is also checked to ensure the provider and task registries are actually packaged.
-
-## What Scout refuses to fake
-
-```text
-"the collection covers 2024, so data must exist"
-"cloud_cover=8 means my AOI is clear"
-"B08 probably means NIR"
-"these two collections have similar names, merge them"
-"the provider is fast, therefore the dataset is better"
-"wildfire task means I'll invent a pre-fire date"
-"the model sounded confident"
+```bash
+python evals/live.py
 ```
 
-Those are shortcuts.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the development workflow.
 
-Scout's job is to turn them into inspectable claims.
+<br clear="right">
 
-## Philosophy
+## Repository map
 
 ```text
-STAC gives us a language.
-
-Scout adds skepticism.
+stac-scout/
+├── src/stac_scout/
+│   ├── catalogs/          # STAC adapters and network boundary
+│   ├── data/              # provider + task registries
+│   ├── discovery/         # candidate retrieval
+│   ├── models/            # request/result contracts
+│   ├── normalize/         # STAC metadata normalization
+│   ├── planning/          # asset + raster planning
+│   ├── provenance/        # manifest + replay
+│   └── verify/            # Item checks and AOI coverage
+├── evals/                 # deterministic compatibility corpus
+├── examples/
+│   └── wildfire-impact/
+├── docs/
+│   ├── ARCHITECTURE.md
+│   ├── MASCOT.md
+│   └── TASK_RULES.md
+└── tests/
 ```
 
-Or, in GeoGeek form:
+## Scout, the mascot
 
-> **The map can look right while the geography is wrong.  
-> The query can run while the dataset choice is wrong.  
-> Check the semantics. Check the evidence.**
+The little field bug is **Scout**.
+
+Its layered shell loosely mirrors Collection → Item → Asset, and the scanner is there because
+looking first is cheaper than debugging the wrong dataset later.
+
+Mascot files and usage notes live in [`docs/MASCOT.md`](docs/MASCOT.md).
+
+## Release
+
+The current package is published on PyPI and GitHub Releases:
+
+```bash
+python -m pip install stac-scout
+stac-scout version
+```
+
+Release artifacts are built once, published through PyPI Trusted Publishing, checksum-recorded,
+and attached to the matching GitHub Release.
+
+See [`docs/RELEASE.md`](docs/RELEASE.md).
+
+## Security
+
+For security reports, use [SECURITY.md](SECURITY.md).
+
+If STAC Scout is embedded in a hosted service, treat arbitrary catalog URLs as outbound network
+input and apply the deployment's normal egress policy.
 
 ## License
 
@@ -640,8 +463,8 @@ Or, in GeoGeek form:
 
 <div align="center">
 
-**Find it. Verify it. Plan it. Replay it.**
+**STAC Scout**
 
-`catalog metadata ≠ ground truth`
+`find → verify → plan → replay`
 
 </div>
