@@ -102,14 +102,14 @@ def evaluate_constraints(card: DatasetCard, request: ScoutRequest) -> tuple[Cons
                 status = ConstraintStatus.FAIL
                 failed_names = ", ".join(failed)
                 reason = (
-                    f"no declared asset meets the requested source-resolution limit for: "
+                    "no declared asset meets the requested source-resolution limit for: "
                     f"{failed_names}"
                 )
             elif unknown:
                 status = ConstraintStatus.UNKNOWN
                 unknown_names = ", ".join(unknown)
                 reason = (
-                    f"measurement-specific source resolution is not declared for: "
+                    "measurement-specific source resolution is not declared for: "
                     f"{unknown_names}"
                 )
             else:
