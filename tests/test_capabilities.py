@@ -210,8 +210,9 @@ def test_inspect_catalog_classifies_exhausted_http_408_as_timeout(
         backoff_jitter_s=0,
     )
 
+    transport = httpx.MockTransport(lambda request: httpx.Response(408))
     with (
-        httpx.Client(transport=httpx.MockTransport(lambda request: httpx.Response(408))) as client,
+        httpx.Client(transport=transport) as client,
         pytest.raises(ProviderTimeoutError) as exc_info,
     ):
         inspect_catalog(
