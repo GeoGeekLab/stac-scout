@@ -7,6 +7,7 @@ from time import perf_counter
 import httpx
 
 from stac_scout.catalogs.capabilities import inspect_catalog
+from stac_scout.catalogs.errors import ProviderError
 from stac_scout.models import ProviderHealth, ProviderHealthStatus, ProviderSpec
 
 
@@ -22,7 +23,7 @@ def check_provider(
     started = clock()
     try:
         capabilities = inspect_catalog(provider.url, client=client, timeout=timeout)
-    except (httpx.HTTPError, ValueError) as exc:
+    except ProviderError as exc:
         elapsed = max(0.0, (clock() - started) * 1000)
         return ProviderHealth(
             provider_key=provider.key,
