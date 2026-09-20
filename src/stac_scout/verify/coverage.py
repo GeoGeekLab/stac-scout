@@ -195,9 +195,7 @@ def coverage_metrics(
     aoi = _areal_geometry(aoi_geojson, label="AOI")
     item = _areal_geometry(item_geojson, label="Item")
 
-    center_longitude = _longitude_center(
-        longitude for longitude, _ in _exterior_positions(aoi)
-    )
+    center_longitude = _longitude_center(longitude for longitude, _ in _exterior_positions(aoi))
     normalized_aoi = _unwrap_longitudes(aoi, center_longitude=center_longitude)
     normalized_item = _unwrap_longitudes(item, center_longitude=center_longitude)
 
