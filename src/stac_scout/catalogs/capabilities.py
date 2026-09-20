@@ -74,7 +74,7 @@ def _retry_after_seconds(value: str | None) -> float | None:
 def _backoff_seconds(policy: ProviderNetworkPolicy, attempt: int) -> float:
     base = policy.backoff_factor_s * (2**attempt)
     jitter = random.uniform(0.0, policy.backoff_jitter_s)
-    return base + jitter
+    return min(policy.max_retry_delay_s, base + jitter)
 
 
 def _raise_response_error(response: httpx.Response) -> None:
@@ -115,7 +115,11 @@ def _get_json_object(
 
         if response.status_code in policy.retry_statuses and attempt < policy.max_retries:
             retry_after = _retry_after_seconds(response.headers.get("Retry-After"))
-            delay = retry_after if retry_after is not None else _backoff_seconds(policy, attempt)
+            delay = (
+                min(retry_after, policy.max_retry_delay_s)
+                if retry_after is not None
+                else _backoff_seconds(policy, attempt)
+            )
             time.sleep(delay)
             continue
 
