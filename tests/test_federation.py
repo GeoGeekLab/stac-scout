@@ -51,6 +51,20 @@ class ProviderFailureAdapter(Adapter):
         )
 
 
+class MalformedCollectionAdapter(Adapter):
+    def list_collections(self) -> list[dict[str, Any]]:
+        return [
+            {
+                "id": "malformed",
+                "extent": {
+                    "spatial": {"bbox": [["not-a-number", -90, 180, 90]]},
+                    "temporal": {"interval": [[None, None]]},
+                },
+                "summaries": {},
+            }
+        ]
+
+
 class ProgrammingBugAdapter(Adapter):
     def list_collections(self) -> list[dict[str, Any]]:
         raise RuntimeError("internal invariant failed")
@@ -108,6 +122,20 @@ def test_federation_groups_exact_duplicates_and_keeps_typed_provider_failures(
     assert result.failures[0].error_type == "ProviderRateLimitError"
     assert result.failures[0].status_code == 429
     assert result.failures[0].retryable is True
+
+
+def test_federation_reports_malformed_collection_as_provider_failure(
+    scout_request: ScoutRequest,
+) -> None:
+    result = FederatedScout(
+        {"malformed": MalformedCollectionAdapter("https://malformed.test/stac", [])}
+    ).discover(scout_request)
+
+    assert result.candidates == ()
+    assert len(result.failures) == 1
+    assert result.failures[0].provider_key == "malformed"
+    assert result.failures[0].error_type == "ProviderMetadataError"
+    assert result.failures[0].retryable is False
 
 
 def test_federation_does_not_mask_programming_errors(
