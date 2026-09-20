@@ -229,9 +229,8 @@ def test_provider_network_error_is_a_provider_failure(
                 retryable=True,
             )
 
-    result = FederatedScout(
-        {"network": NetworkAdapter("https://network.test/stac", [])}
-    ).discover(scout_request)
+    adapters = {"network": NetworkAdapter("https://network.test/stac", [])}
+    result = FederatedScout(adapters).discover(scout_request)
 
     assert result.candidates == ()
     assert result.failures[0].error_type == "ProviderNetworkError"
