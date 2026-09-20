@@ -178,12 +178,14 @@ def test_build_access_plan_separates_source_and_target_resolution(
     request = scout_request.model_copy(
         update={
             "max_source_resolution_m": 30,
+            "target_crs": "EPSG:3857",
             "target_resolution_m": 20,
         }
     )
 
     plan, _ = build_access_plan(request, _items(aoi), _probe())
 
+    assert plan.output_crs == "EPSG:3857"
     assert plan.output_resolution == 20
     assert _constraint(plan, "source_resolution_m").status is ConstraintStatus.PASS
 
