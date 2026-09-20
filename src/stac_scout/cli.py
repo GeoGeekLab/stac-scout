@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, Never
 
 import typer
 from pydantic import BaseModel, ValidationError
@@ -45,7 +45,7 @@ def _print_json(value: Any) -> None:
     console.print_json(json.dumps(value, indent=2, default=str))
 
 
-def _constraint_violation(exc: ConstraintViolationError) -> None:
+def _constraint_violation(exc: ConstraintViolationError) -> Never:
     _print_json(
         {
             "error": str(exc),
