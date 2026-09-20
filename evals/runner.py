@@ -12,7 +12,6 @@ from stac_scout.models import DataType, GeoTask, IdentityStrength, ScoutRequest,
 from stac_scout.normalize import normalize_collection
 from stac_scout.tasking import TaskAdvisor
 
-
 REQUIRED_REGRESSION_IDS = frozenset(
     {
         "sar_request_vs_optical",
