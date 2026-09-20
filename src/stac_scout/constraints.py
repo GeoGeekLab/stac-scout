@@ -303,9 +303,7 @@ def evaluate_plan_constraints(
                 status=status,
                 expected=request.required_measurements,
                 observed={
-                    "selected": {
-                        choice.measurement: choice.asset_key for choice in asset_choices
-                    },
+                    "selected": {choice.measurement: choice.asset_key for choice in asset_choices},
                     "missing": tuple(missing_measurements),
                     "ambiguous": tuple(ambiguous_measurements),
                 },
