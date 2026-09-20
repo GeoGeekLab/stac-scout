@@ -215,3 +215,63 @@ def test_request_rejects_conflicting_resolution_fields() -> None:
                 "max_spatial_resolution_m": 30,
             }
         )
+
+
+def test_request_rejects_invalid_target_crs() -> None:
+    with pytest.raises(ValidationError, match="valid CRS"):
+        ScoutRequest.model_validate(
+            {
+                "task": "vegetation analysis",
+                "place": "Singapore",
+                "datetime": {
+                    "start": "2026-06-01T00:00:00Z",
+                    "end": "2026-06-30T00:00:00Z",
+                },
+                "target_crs": "NOT-A-CRS",
+            }
+        )
+
+
+def test_request_rejects_non_meter_projected_target_crs() -> None:
+    with pytest.raises(ValidationError, match="projected meter-based"):
+        ScoutRequest.model_validate(
+            {
+                "task": "vegetation analysis",
+                "place": "New York",
+                "datetime": {
+                    "start": "2026-06-01T00:00:00Z",
+                    "end": "2026-06-30T00:00:00Z",
+                },
+                "target_crs": "EPSG:2263",
+                "target_resolution_m": 20,
+            }
+        )
+
+
+def test_request_rejects_malformed_geojson_polygon() -> None:
+    with pytest.raises(ValidationError, match="valid GeoJSON"):
+        ScoutRequest.model_validate(
+            {
+                "task": "vegetation analysis",
+                "geometry": {"type": "Polygon", "coordinates": "not-coordinates"},
+                "datetime": {
+                    "start": "2026-06-01T00:00:00Z",
+                    "end": "2026-06-30T00:00:00Z",
+                },
+            }
+        )
+
+
+def test_request_rejects_empty_measurement_name() -> None:
+    with pytest.raises(ValidationError, match="must not be empty"):
+        ScoutRequest.model_validate(
+            {
+                "task": "vegetation analysis",
+                "place": "Singapore",
+                "datetime": {
+                    "start": "2026-06-01T00:00:00Z",
+                    "end": "2026-06-30T00:00:00Z",
+                },
+                "required_measurements": ["red", "  "],
+            }
+        )
