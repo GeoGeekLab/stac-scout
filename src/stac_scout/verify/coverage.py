@@ -105,9 +105,7 @@ def _ring_coordinates(
         return []
 
     first_longitude = float(raw[0][0])
-    first = first_longitude + 360.0 * round(
-        (center_longitude - first_longitude) / 360.0
-    )
+    first = first_longitude + 360.0 * round((center_longitude - first_longitude) / 360.0)
     unwrapped = [(first, float(raw[0][1]))]
     previous = first
 
