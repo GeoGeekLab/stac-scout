@@ -8,7 +8,13 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict
 
 from stac_scout.identity import dataset_identity
-from stac_scout.models import DataType, GeoTask, IdentityStrength, ScoutRequest, TemporalStrategy
+from stac_scout.models import (
+    DataType,
+    GeoTask,
+    IdentityStrength,
+    ScoutRequest,
+    TemporalStrategy,
+)
 from stac_scout.normalize import normalize_collection
 from stac_scout.tasking import TaskAdvisor
 
