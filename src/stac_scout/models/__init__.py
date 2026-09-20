@@ -40,6 +40,7 @@ from .task import (
 )
 
 __all__ = [
+    "CURRENT_MANIFEST_SCHEMA_VERSION",
     "AccessPlan",
     "AccessPolicy",
     "AssetChoice",
@@ -51,10 +52,9 @@ __all__ = [
     "CatalogCapabilities",
     "ConstraintCheck",
     "ConstraintStatus",
-    "CURRENT_MANIFEST_SCHEMA_VERSION",
+    "DataType",
     "DatasetCard",
     "DatasetIdentity",
-    "DataType",
     "DecisionReport",
     "DerivedRequirement",
     "Evidence",
