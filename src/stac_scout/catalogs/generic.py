@@ -170,8 +170,7 @@ class GenericStacAdapter:
         def load_items() -> list[dict[str, Any]]:
             records = self._provider_call(search.items)
             return [
-                _record_dict(item, context="provider Item metadata is invalid")
-                for item in records
+                _record_dict(item, context="provider Item metadata is invalid") for item in records
             ]
 
         return self._metadata_call(
