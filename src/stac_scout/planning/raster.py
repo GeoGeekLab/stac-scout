@@ -4,8 +4,6 @@ from typing import Any
 
 from stac_scout.constraints import evaluate_plan_constraints
 from stac_scout.models import AccessPlan, AssetChoice, AvailabilityProbe, DataType, ScoutRequest
-from stac_scout.normalize.bands import band_definitions
-
 from .assets import select_asset_choices
 from .volume import estimate_asset_bytes
 
@@ -45,6 +43,15 @@ _CONTINUOUS_MEASUREMENTS = {
     "yellow",
 }
 
+def _all_band_definitions(asset: dict[str, Any]) -> tuple[dict[str, Any], ...]:
+    bands: list[dict[str, Any]] = []
+    for key in ("bands", "eo:bands", "raster:bands"):
+        value = asset.get(key)
+        if isinstance(value, list):
+            bands.extend(entry for entry in value if isinstance(entry, dict))
+    return tuple(bands)
+
+
 
 def _normalized_name(value: str) -> str:
     return value.casefold().replace("-", "_").replace(" ", "_")
@@ -83,7 +90,7 @@ def _asset_evidence(
         raw_roles = asset.get("roles")
         if isinstance(raw_roles, list):
             roles.update(str(role).casefold() for role in raw_roles if isinstance(role, str))
-        bands.extend(band_definitions(asset))
+        bands.extend(_all_band_definitions(asset))
 
     return roles, tuple(bands)
 
