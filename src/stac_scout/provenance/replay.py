@@ -75,9 +75,7 @@ def replay_manifest(
     raw_missing = tuple(sorted(previous - current))
     raw_new = tuple(sorted(current - previous))
 
-    previous_complete = (
-        manifest.observation.completeness is SearchCompleteness.COMPLETE
-    )
+    previous_complete = manifest.observation.completeness is SearchCompleteness.COMPLETE
     current_complete = probe.search.completeness is SearchCompleteness.COMPLETE
 
     confirmed_missing = raw_missing if current_complete else ()
