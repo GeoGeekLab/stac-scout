@@ -5,6 +5,7 @@ from typing import Any
 
 from stac_scout.models import (
     AccessPolicy,
+    AssetChoice,
     ConstraintCheck,
     ConstraintStatus,
     DatasetCard,
@@ -78,22 +79,57 @@ def evaluate_constraints(card: DatasetCard, request: ScoutRequest) -> tuple[Cons
             )
         )
 
-    if request.max_spatial_resolution_m is not None:
-        if card.spatial_resolution_m is None:
-            status = ConstraintStatus.UNKNOWN
-            reason = "collection does not declare a spatial resolution"
-        elif card.spatial_resolution_m <= request.max_spatial_resolution_m:
-            status = ConstraintStatus.PASS
-            reason = None
+    if request.max_source_resolution_m is not None:
+        if request.required_measurements:
+            observed_by_measurement: dict[str, tuple[float, ...] | None] = {}
+            failed: list[str] = []
+            unknown: list[str] = []
+
+            for measurement in request.required_measurements:
+                assets = card.assets_for_measurement(measurement)
+                gsds = tuple(sorted(asset.gsd_m for asset in assets if asset.gsd_m is not None))
+                observed_by_measurement[measurement] = gsds or None
+                if not gsds:
+                    unknown.append(measurement)
+                elif min(gsds) <= request.max_source_resolution_m:
+                    continue
+                elif any(asset.gsd_m is None for asset in assets):
+                    unknown.append(measurement)
+                else:
+                    failed.append(measurement)
+
+            if failed:
+                status = ConstraintStatus.FAIL
+                failed_names = ", ".join(failed)
+                failure_prefix = "no declared asset meets the requested source-resolution limit"
+                reason = f"{failure_prefix}: {failed_names}"
+            elif unknown:
+                status = ConstraintStatus.UNKNOWN
+                unknown_names = ", ".join(unknown)
+                unknown_prefix = "measurement-specific source resolution is not declared"
+                reason = f"{unknown_prefix} for: {unknown_names}"
+            else:
+                status = ConstraintStatus.PASS
+                reason = None
+            observed_resolution: Any = observed_by_measurement
         else:
-            status = ConstraintStatus.FAIL
-            reason = "collection resolution exceeds the requested maximum"
+            observed_resolution = card.spatial_resolution_m
+            if card.spatial_resolution_m is None:
+                status = ConstraintStatus.UNKNOWN
+                reason = "collection does not declare a spatial resolution"
+            elif card.spatial_resolution_m <= request.max_source_resolution_m:
+                status = ConstraintStatus.PASS
+                reason = None
+            else:
+                status = ConstraintStatus.FAIL
+                reason = "collection resolution exceeds the requested source-resolution maximum"
+
         checks.append(
             ConstraintCheck(
-                name="spatial_resolution_m",
+                name="source_resolution_m",
                 status=status,
-                expected=request.max_spatial_resolution_m,
-                observed=card.spatial_resolution_m,
+                expected=request.max_source_resolution_m,
+                observed=observed_resolution,
                 reason=reason,
             )
         )
@@ -226,8 +262,93 @@ def summarize_item_constraints(
 def evaluate_plan_constraints(
     estimated_bytes: int | None,
     request: ScoutRequest,
+    *,
+    asset_choices: Sequence[AssetChoice] = (),
+    missing_measurements: Sequence[str] = (),
+    ambiguous_measurements: Sequence[str] = (),
 ) -> tuple[ConstraintCheck, ...]:
     checks: list[ConstraintCheck] = []
+
+    if request.required_measurements:
+        chosen_measurements = {choice.measurement.casefold() for choice in asset_choices}
+        incomplete = tuple(
+            choice.measurement for choice in asset_choices if not choice.item_coverage_complete
+        )
+        if missing_measurements:
+            status = ConstraintStatus.FAIL
+            reason = "required measurements have no matching Item asset: " + ", ".join(
+                missing_measurements
+            )
+        elif ambiguous_measurements:
+            status = ConstraintStatus.FAIL
+            reason = "asset selection is ambiguous for: " + ", ".join(ambiguous_measurements)
+        elif incomplete:
+            status = ConstraintStatus.FAIL
+            reason = "selected asset key is not present on every inspected Item for: " + ", ".join(
+                incomplete
+            )
+        elif all(
+            measurement.casefold() in chosen_measurements
+            for measurement in request.required_measurements
+        ):
+            status = ConstraintStatus.PASS
+            reason = None
+        else:
+            status = ConstraintStatus.UNKNOWN
+            reason = "required asset selection could not be established"
+
+        checks.append(
+            ConstraintCheck(
+                name="asset_selection",
+                status=status,
+                expected=request.required_measurements,
+                observed={
+                    "selected": {choice.measurement: choice.asset_key for choice in asset_choices},
+                    "missing": tuple(missing_measurements),
+                    "ambiguous": tuple(ambiguous_measurements),
+                },
+                reason=reason,
+            )
+        )
+
+    if request.max_source_resolution_m is not None and request.required_measurements:
+        observed_gsd = {choice.measurement: choice.gsd_m for choice in asset_choices}
+        failed = tuple(
+            choice.measurement
+            for choice in asset_choices
+            if choice.gsd_m is not None and choice.gsd_m > request.max_source_resolution_m
+        )
+        unknown = tuple(
+            choice.measurement
+            for choice in asset_choices
+            if not choice.gsd_complete or choice.gsd_m is None
+        )
+
+        if failed:
+            status = ConstraintStatus.FAIL
+            reason = (
+                "selected asset exceeds the requested source-resolution maximum for: "
+                + ", ".join(failed)
+            )
+        elif missing_measurements or ambiguous_measurements:
+            status = ConstraintStatus.UNKNOWN
+            reason = "source resolution cannot be finalized until asset selection is resolved"
+        elif unknown:
+            status = ConstraintStatus.UNKNOWN
+            reason = "selected asset GSD is not fully declared for: " + ", ".join(unknown)
+        else:
+            status = ConstraintStatus.PASS
+            reason = None
+
+        checks.append(
+            ConstraintCheck(
+                name="source_resolution_m",
+                status=status,
+                expected=request.max_source_resolution_m,
+                observed=observed_gsd,
+                reason=reason,
+            )
+        )
 
     if request.max_data_volume_bytes is not None:
         if estimated_bytes is None:

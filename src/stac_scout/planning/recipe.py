@@ -10,7 +10,12 @@ def odc_stac_recipe(manifest: Manifest) -> str:
     request = manifest.request
     geometry = repr(request.geometry)
     assets = repr(list(manifest.asset_keys))
-    resolution = repr(request.max_spatial_resolution_m)
+    crs_line = f"    crs={request.target_crs!r},\n" if request.target_crs is not None else ""
+    resolution_line = (
+        f"    resolution={request.target_resolution_m!r},\n"
+        if request.target_resolution_m is not None
+        else ""
+    )
     interval = f"{request.datetime.start.isoformat()}/{request.datetime.end.isoformat()}"
 
     if manifest.asset_signing is AssetSigning.PLANETARY_COMPUTER:
@@ -38,6 +43,5 @@ ds = odc.stac.load(
     items,
     bands={assets},
     geopolygon=aoi,
-    resolution={resolution},
-)
+{crs_line}{resolution_line})
 """

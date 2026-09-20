@@ -26,6 +26,7 @@ def test_normalize_collection_extracts_assets_and_resolution() -> None:
                 "B04": {
                     "type": "image/tiff; application=geotiff; profile=cloud-optimized",
                     "roles": ["data"],
+                    "gsd": 10,
                     "eo:bands": [{"name": "B04", "common_name": "red"}],
                 }
             },
@@ -41,6 +42,7 @@ def test_normalize_collection_extracts_assets_and_resolution() -> None:
     assert card.instruments == ("msi",)
     assert "red" in card.measurements
     assert card.assets[0].key == "B04"
+    assert card.assets[0].gsd_m == 10
 
 
 def test_normalize_collection_detects_sar_extension() -> None:

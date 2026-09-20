@@ -76,6 +76,23 @@ def test_recipe_contains_reproducible_query(scout_request: ScoutRequest) -> None
     assert "Client.open('https://example.test/stac')" in recipe
     assert "'collection-1'" in recipe
     assert "'B04', 'B08'" in recipe
+    assert "resolution=" not in recipe
+
+
+def test_recipe_uses_explicit_target_resolution_only(scout_request: ScoutRequest) -> None:
+    request = scout_request.model_copy(
+        update={
+            "max_source_resolution_m": 30,
+            "target_crs": "EPSG:3857",
+            "target_resolution_m": 20,
+        }
+    )
+
+    recipe = odc_stac_recipe(_manifest(request))
+
+    assert "crs='EPSG:3857'" in recipe
+    assert "resolution=20" in recipe
+    assert "resolution=30" not in recipe
 
 
 def test_planetary_computer_recipe_uses_official_signer(scout_request: ScoutRequest) -> None:

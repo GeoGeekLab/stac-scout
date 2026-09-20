@@ -118,7 +118,9 @@ def test_request_round_trip() -> None:
         ),
         data_type=DataType.OPTICAL,
         required_measurements=("red", "nir"),
-        max_spatial_resolution_m=10,
+        max_source_resolution_m=10,
+        target_crs="EPSG:3857",
+        target_resolution_m=20,
         max_cloud_cover=20,
         access=AccessPolicy.OPEN,
     )
@@ -126,3 +128,150 @@ def test_request_round_trip() -> None:
     restored = ScoutRequest.model_validate_json(request.model_dump_json())
 
     assert restored == request
+    assert restored.max_source_resolution_m == 10
+    assert restored.target_crs == "EPSG:3857"
+    assert restored.target_resolution_m == 20
+    assert "max_spatial_resolution_m" not in restored.model_dump()
+
+
+def test_request_requires_crs_for_meter_target_resolution() -> None:
+    with pytest.raises(ValidationError, match="target_crs is required"):
+        ScoutRequest.model_validate(
+            {
+                "task": "vegetation analysis",
+                "place": "Singapore",
+                "datetime": {
+                    "start": "2026-06-01T00:00:00Z",
+                    "end": "2026-06-30T00:00:00Z",
+                },
+                "target_resolution_m": 20,
+            }
+        )
+
+
+def test_request_rejects_geographic_crs_for_meter_target_resolution() -> None:
+    with pytest.raises(ValidationError, match="projected meter-based"):
+        ScoutRequest.model_validate(
+            {
+                "task": "vegetation analysis",
+                "place": "Singapore",
+                "datetime": {
+                    "start": "2026-06-01T00:00:00Z",
+                    "end": "2026-06-30T00:00:00Z",
+                },
+                "target_crs": "EPSG:4326",
+                "target_resolution_m": 20,
+            }
+        )
+
+
+def test_request_accepts_utm_target_grid() -> None:
+    request = ScoutRequest.model_validate(
+        {
+            "task": "vegetation analysis",
+            "place": "Singapore",
+            "datetime": {
+                "start": "2026-06-01T00:00:00Z",
+                "end": "2026-06-30T00:00:00Z",
+            },
+            "target_crs": "UTM",
+            "target_resolution_m": 20,
+        }
+    )
+
+    assert request.target_crs == "utm"
+    assert request.target_resolution_m == 20
+
+
+def test_request_accepts_legacy_source_resolution_alias() -> None:
+    request = ScoutRequest.model_validate(
+        {
+            "task": "vegetation analysis",
+            "place": "Singapore",
+            "datetime": {
+                "start": "2026-06-01T00:00:00Z",
+                "end": "2026-06-30T00:00:00Z",
+            },
+            "max_spatial_resolution_m": 30,
+        }
+    )
+
+    assert request.max_source_resolution_m == 30
+    assert request.max_spatial_resolution_m == 30
+    assert "max_spatial_resolution_m" not in request.model_dump()
+
+
+def test_request_rejects_conflicting_resolution_fields() -> None:
+    with pytest.raises(ValidationError, match="use only max_source_resolution_m"):
+        ScoutRequest.model_validate(
+            {
+                "task": "vegetation analysis",
+                "place": "Singapore",
+                "datetime": {
+                    "start": "2026-06-01T00:00:00Z",
+                    "end": "2026-06-30T00:00:00Z",
+                },
+                "max_source_resolution_m": 10,
+                "max_spatial_resolution_m": 30,
+            }
+        )
+
+
+def test_request_rejects_invalid_target_crs() -> None:
+    with pytest.raises(ValidationError, match="valid CRS"):
+        ScoutRequest.model_validate(
+            {
+                "task": "vegetation analysis",
+                "place": "Singapore",
+                "datetime": {
+                    "start": "2026-06-01T00:00:00Z",
+                    "end": "2026-06-30T00:00:00Z",
+                },
+                "target_crs": "NOT-A-CRS",
+            }
+        )
+
+
+def test_request_rejects_non_meter_projected_target_crs() -> None:
+    with pytest.raises(ValidationError, match="projected meter-based"):
+        ScoutRequest.model_validate(
+            {
+                "task": "vegetation analysis",
+                "place": "New York",
+                "datetime": {
+                    "start": "2026-06-01T00:00:00Z",
+                    "end": "2026-06-30T00:00:00Z",
+                },
+                "target_crs": "EPSG:2263",
+                "target_resolution_m": 20,
+            }
+        )
+
+
+def test_request_rejects_malformed_geojson_polygon() -> None:
+    with pytest.raises(ValidationError, match="valid GeoJSON"):
+        ScoutRequest.model_validate(
+            {
+                "task": "vegetation analysis",
+                "geometry": {"type": "Polygon", "coordinates": "not-coordinates"},
+                "datetime": {
+                    "start": "2026-06-01T00:00:00Z",
+                    "end": "2026-06-30T00:00:00Z",
+                },
+            }
+        )
+
+
+def test_request_rejects_empty_measurement_name() -> None:
+    with pytest.raises(ValidationError, match="must not be empty"):
+        ScoutRequest.model_validate(
+            {
+                "task": "vegetation analysis",
+                "place": "Singapore",
+                "datetime": {
+                    "start": "2026-06-01T00:00:00Z",
+                    "end": "2026-06-30T00:00:00Z",
+                },
+                "required_measurements": ["red", "  "],
+            }
+        )

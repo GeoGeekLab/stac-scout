@@ -25,5 +25,5 @@ def scout_request(aoi: dict[str, object]) -> ScoutRequest:
             end=datetime(2026, 6, 30, tzinfo=UTC),
         ),
         required_measurements=("red", "nir"),
-        max_spatial_resolution_m=10,
+        max_source_resolution_m=10,
     )

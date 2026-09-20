@@ -89,6 +89,59 @@ class ModalityAdapter(Adapter):
         )
 
 
+class AmbiguousAssetAdapter(Adapter):
+    def search_items(
+        self,
+        scout_request: ScoutRequest,
+        collection_id: str,
+        *,
+        max_items: int = 100,
+    ) -> list[dict[str, Any]]:
+        return [
+            {
+                "id": "scene-1",
+                "geometry": scout_request.geometry,
+                "properties": {},
+                "assets": {
+                    "A": {
+                        "type": "image/tiff",
+                        "roles": ["data"],
+                        "eo:bands": [{"common_name": "red"}],
+                    },
+                    "B": {
+                        "type": "image/tiff",
+                        "roles": ["data"],
+                        "eo:bands": [{"common_name": "red"}],
+                    },
+                },
+            }
+        ]
+
+
+class CoarseAssetAdapter(Adapter):
+    def search_items(
+        self,
+        scout_request: ScoutRequest,
+        collection_id: str,
+        *,
+        max_items: int = 100,
+    ) -> list[dict[str, Any]]:
+        return [
+            {
+                "id": "scene-1",
+                "geometry": scout_request.geometry,
+                "properties": {},
+                "assets": {
+                    "red": {
+                        "type": "image/tiff",
+                        "roles": ["data"],
+                        "gsd": 30,
+                    }
+                },
+            }
+        ]
+
+
 class CloudAdapter(Adapter):
     def __init__(self, cloud_values: list[float | None]) -> None:
         self.cloud_values = cloud_values
@@ -213,6 +266,36 @@ def test_engine_plan_rejects_volume_budget_failure(
 ) -> None:
     request = scout_request.model_copy(update={"max_data_volume_bytes": 100})
     engine = ScoutEngine(Adapter())
+
+    with pytest.raises(ConstraintViolationError, match="planning-level hard constraints failed"):
+        engine.plan(request, "optical")
+
+
+def test_engine_plan_rejects_ambiguous_asset_selection(
+    scout_request: ScoutRequest,
+) -> None:
+    request = scout_request.model_copy(
+        update={
+            "required_measurements": ("red",),
+            "max_source_resolution_m": None,
+        }
+    )
+    engine = ScoutEngine(AmbiguousAssetAdapter())
+
+    with pytest.raises(ConstraintViolationError, match="planning-level hard constraints failed"):
+        engine.plan(request, "optical")
+
+
+def test_engine_plan_rejects_selected_asset_over_source_resolution(
+    scout_request: ScoutRequest,
+) -> None:
+    request = scout_request.model_copy(
+        update={
+            "required_measurements": ("red",),
+            "max_source_resolution_m": 10,
+        }
+    )
+    engine = ScoutEngine(CoarseAssetAdapter())
 
     with pytest.raises(ConstraintViolationError, match="planning-level hard constraints failed"):
         engine.plan(request, "optical")

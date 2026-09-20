@@ -39,6 +39,17 @@ class AssetInfo(BaseModel):
     title: str | None = None
     bands: tuple[BandInfo, ...] = ()
     size_bytes: int | None = Field(default=None, ge=0)
+    gsd_m: float | None = Field(default=None, gt=0)
+
+    @property
+    def measurements(self) -> frozenset[str]:
+        values = {self.key.casefold()}
+        for band in self.bands:
+            if band.name:
+                values.add(band.name.casefold())
+            if band.common_name:
+                values.add(band.common_name.casefold())
+        return frozenset(values)
 
 
 class DatasetCard(BaseModel):
@@ -72,13 +83,12 @@ class DatasetCard(BaseModel):
             if band.common_name:
                 values.add(band.common_name.casefold())
         for asset in self.assets:
-            values.add(asset.key.casefold())
-            for band in asset.bands:
-                if band.name:
-                    values.add(band.name.casefold())
-                if band.common_name:
-                    values.add(band.common_name.casefold())
+            values.update(asset.measurements)
         return frozenset(values)
+
+    def assets_for_measurement(self, measurement: str) -> tuple[AssetInfo, ...]:
+        target = measurement.casefold()
+        return tuple(asset for asset in self.assets if target in asset.measurements)
 
 
 class ConstraintCheck(BaseModel):

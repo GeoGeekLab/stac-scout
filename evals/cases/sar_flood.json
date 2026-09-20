@@ -9,7 +9,7 @@
     },
     "data_type": "sar",
     "required_measurements": ["vv"],
-    "max_spatial_resolution_m": 20,
+    "max_source_resolution_m": 20,
     "access": "open"
   },
   "expectations": {
