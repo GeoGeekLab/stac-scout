@@ -100,9 +100,7 @@ def build_manifest(
         catalog_capabilities=catalog_capabilities,
         collection_snapshot=collection_snapshot,
         collection_fingerprint=(
-            canonical_fingerprint(collection_snapshot)
-            if collection_snapshot is not None
-            else None
+            canonical_fingerprint(collection_snapshot) if collection_snapshot is not None else None
         ),
         query=query,
         query_fingerprint=canonical_fingerprint(query),
