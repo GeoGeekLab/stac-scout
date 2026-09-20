@@ -26,7 +26,15 @@ class LocationResolutionRequired(ValueError):
 
 
 def _record_dict(record: Any, *, context: str) -> dict[str, Any]:
-    payload = record.to_dict()
+    serializer = getattr(record, "to_dict", None)
+    if not callable(serializer):
+        raise ProviderMetadataError(f"{context}: record does not provide to_dict()")
+
+    try:
+        payload = serializer()
+    except (pystac.STACError, KeyError, TypeError, ValueError) as exc:
+        raise ProviderMetadataError(f"{context}: {exc}") from exc
+
     if not isinstance(payload, dict):
         raise ProviderMetadataError(f"{context}: expected an object")
     return cast(dict[str, Any], payload)
@@ -52,7 +60,6 @@ class GenericStacAdapter:
         self,
         operation: Callable[[], _T],
         *,
-        metadata_context: str,
         capability_context: str | None = None,
     ) -> _T:
         try:
@@ -63,8 +70,21 @@ class GenericStacAdapter:
             if capability_context is None:
                 raise
             raise ProviderCapabilityError(capability_context) from exc
+
+    def _metadata_call(
+        self,
+        operation: Callable[[], _T],
+        *,
+        context: str,
+        capability_context: str | None = None,
+    ) -> _T:
+        try:
+            return self._provider_call(
+                operation,
+                capability_context=capability_context,
+            )
         except (pystac.STACError, KeyError, TypeError, ValueError) as exc:
-            raise ProviderMetadataError(f"{metadata_context}: {exc}") from exc
+            raise ProviderMetadataError(f"{context}: {exc}") from exc
 
     def _client(self) -> Any:
         if self._client_factory is not None:
@@ -76,13 +96,13 @@ class GenericStacAdapter:
             timeout=self.network_policy.timeout,
             max_retries=self.network_policy.retry(),
         )
-        return self._provider_call(
+        return self._metadata_call(
             lambda: Client.open(
                 self.catalog_url,
                 stac_io=stac_io,
                 timeout=self.network_policy.timeout,
             ),
-            metadata_context="provider root metadata is invalid",
+            context="provider root metadata is invalid",
         )
 
     def inspect(self) -> CatalogCapabilities:
@@ -95,21 +115,22 @@ class GenericStacAdapter:
         client = self._client()
 
         def load() -> list[dict[str, Any]]:
+            records = self._provider_call(client.get_collections)
             return [
                 _record_dict(collection, context="collection metadata is invalid")
-                for collection in client.get_collections()
+                for collection in records
             ]
 
-        return self._provider_call(
+        return self._metadata_call(
             load,
-            metadata_context="provider collection metadata is invalid",
+            context="provider collection metadata is invalid",
         )
 
     def get_collection(self, collection_id: str) -> dict[str, Any]:
         client = self._client()
-        collection = self._provider_call(
+        collection = self._metadata_call(
             lambda: client.get_collection(collection_id),
-            metadata_context=f"collection {collection_id!r} metadata is invalid",
+            context=f"collection {collection_id!r} metadata is invalid",
         )
         if collection is None:
             raise ProviderProtocolError(
@@ -117,12 +138,9 @@ class GenericStacAdapter:
                 status_code=404,
             )
 
-        return self._provider_call(
-            lambda: _record_dict(
-                collection,
-                context=f"collection {collection_id!r} metadata is invalid",
-            ),
-            metadata_context=f"collection {collection_id!r} metadata is invalid",
+        return _record_dict(
+            collection,
+            context=f"collection {collection_id!r} metadata is invalid",
         )
 
     def search_items(
@@ -139,21 +157,24 @@ class GenericStacAdapter:
 
         interval = f"{request.datetime.start.isoformat()}/{request.datetime.end.isoformat()}"
         client = self._client()
-
-        def load() -> list[dict[str, Any]]:
-            search = client.search(
+        search = self._provider_call(
+            lambda: client.search(
                 collections=[collection_id],
                 intersects=request.geometry,
                 datetime=interval,
                 max_items=max_items,
-            )
+            ),
+            capability_context="provider does not support the required Item Search operation",
+        )
+
+        def load_items() -> list[dict[str, Any]]:
+            records = self._provider_call(search.items)
             return [
                 _record_dict(item, context="provider Item metadata is invalid")
-                for item in search.items()
+                for item in records
             ]
 
-        return self._provider_call(
-            load,
-            metadata_context="provider Item metadata is invalid",
-            capability_context="provider does not support the required Item Search operation",
+        return self._metadata_call(
+            load_items,
+            context="provider Item metadata is invalid",
         )
