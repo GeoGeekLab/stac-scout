@@ -73,7 +73,7 @@ def _retry_after_seconds(value: str | None) -> float | None:
 
 def _backoff_seconds(policy: ProviderNetworkPolicy, attempt: int) -> float:
     base = policy.backoff_factor_s * (2**attempt)
-    jitter = random.uniform(0.0, policy.backoff_jitter_s)
+    jitter = float(random.uniform(0.0, policy.backoff_jitter_s))
     return min(policy.max_retry_delay_s, base + jitter)
 
 
