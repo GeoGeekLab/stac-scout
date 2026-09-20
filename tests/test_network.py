@@ -65,7 +65,8 @@ def test_network_policy_builds_bounded_retry_configuration() -> None:
 
 def test_network_policy_caps_retry_after_header() -> None:
     class Response:
-        headers = {"Retry-After": "999"}
+        def __init__(self) -> None:
+            self.headers = {"Retry-After": "999"}
 
     retry = ProviderNetworkPolicy(max_retry_delay_s=2.5).retry()
 
