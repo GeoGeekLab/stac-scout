@@ -40,9 +40,19 @@ def probe_items(
                 item_id = item.get("id", "<unknown>")
                 warnings.append(f"could not measure coverage for item {item_id}")
 
-        properties = item.get("properties", {})
+        raw_properties = item.get("properties", {})
+        if isinstance(raw_properties, dict):
+            properties = raw_properties
+        else:
+            properties = {}
+            item_id = item.get("id", "<unknown>")
+            warnings.append(f"item {item_id} has non-object properties metadata")
+
         cloud_cover = properties.get("eo:cloud_cover")
-        if not isinstance(cloud_cover, (int, float)):
+        if (
+            not isinstance(cloud_cover, (int, float))
+            or isinstance(cloud_cover, bool)
+        ):
             cloud_cover = None
 
         assets = item.get("assets", {})
