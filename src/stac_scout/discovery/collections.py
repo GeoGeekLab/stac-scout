@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from stac_scout.models import DataType, DatasetCard, ScoutRequest
+from stac_scout.models import DatasetCard, DataType, ScoutRequest
 
 _TOKEN = re.compile(r"[a-z0-9][a-z0-9._+-]*")
 
