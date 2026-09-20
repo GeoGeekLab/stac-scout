@@ -62,10 +62,7 @@ class Adapter:
         *,
         max_items: int = 100,
     ) -> list[dict[str, Any]]:
-        return [
-            _item(identifier, scout_request)
-            for identifier in self.item_ids[:max_items]
-        ]
+        return [_item(identifier, scout_request) for identifier in self.item_ids[:max_items]]
 
 
 class PlanningAdapter(Adapter):
