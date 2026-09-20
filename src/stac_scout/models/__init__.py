@@ -10,7 +10,12 @@ from .dataset import (
 from .health import ProviderHealth, ProviderHealthStatus
 from .identity import DatasetIdentity, IdentityStrength
 from .intent import IntentDraft, UnresolvedIntentError
-from .probe import AvailabilityProbe, ItemEvidence
+from .probe import AvailabilityProbe, ItemEvidence, SearchCompleteness, SearchObservation
+from .provenance import (
+    CURRENT_MANIFEST_SCHEMA_VERSION,
+    Manifest,
+    SearchQuery,
+)
 from .provider import (
     AssetSigning,
     ProviderAccess,
@@ -23,7 +28,6 @@ from .report import (
     CandidateAssessment,
     DecisionReport,
     Evidence,
-    Manifest,
     VerificationStatus,
 )
 from .request import AccessPolicy, DataType, ScoutRequest, TimeRange
@@ -45,6 +49,7 @@ __all__ = [
     "BandInfo",
     "CandidateAssessment",
     "CatalogCapabilities",
+    "CURRENT_MANIFEST_SCHEMA_VERSION",
     "ConstraintCheck",
     "ConstraintStatus",
     "DataType",
@@ -58,6 +63,9 @@ __all__ = [
     "IntentDraft",
     "ItemEvidence",
     "Manifest",
+    "SearchCompleteness",
+    "SearchObservation",
+    "SearchQuery",
     "ProviderAccess",
     "ProviderAdapter",
     "ProviderHealth",
