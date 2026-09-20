@@ -9,11 +9,8 @@ from .bands import band_definitions, normalize_band
 
 def normalize_asset(key: str, raw: dict[str, Any]) -> AssetInfo:
     size = raw.get("file:size")
-    size_bytes = (
-        size
-        if isinstance(size, int) and not isinstance(size, bool) and size >= 0
-        else None
-    )
+    valid_size = isinstance(size, int) and not isinstance(size, bool) and size >= 0
+    size_bytes = size if valid_size else None
     gsd = raw.get("gsd")
     gsd_m = (
         float(gsd)
