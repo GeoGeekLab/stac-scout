@@ -1,0 +1,54 @@
+name: Feature request
+description: Propose a capability with a concrete STAC/geospatial use case.
+title: "[enhancement] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What real dataset-selection, verification, planning, or replay problem needs solving?
+    validations:
+      required: true
+
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Proposed behavior
+      description: Describe observable behavior rather than implementation preference.
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Standards or evidence
+      description: Link relevant STAC extensions, provider documentation, scientific conventions, or examples.
+
+  - type: dropdown
+    id: unknowns
+    attributes:
+      label: How should missing evidence behave?
+      options:
+        - Return UNKNOWN / preserve ambiguity
+        - Reject the request
+        - Not applicable
+        - Needs design
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: What deterministic tests/evals would prove this works?
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope checks
+      options:
+        - label: I checked the v0.5.0 hardening roadmap and understand correctness work may take priority over new features.
+          required: true

@@ -1,0 +1,64 @@
+name: Bug report
+description: Report a reproducible software defect that is not primarily a scientific/correctness issue.
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For wrong dataset, geometry, measurement, asset, or replay decisions, use the Correctness report instead.
+        Do not include secrets, credentials, or signed URLs.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What failed?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Minimal reproduction
+      description: Provide the smallest command, Python snippet, or fixture that reproduces the problem.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include the relevant traceback or error message. Redact sensitive values.
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: |
+        stac-scout version:
+        Python version:
+        OS:
+        provider/catalog:
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I removed secrets, credentials, tokens, and signed URLs.
+          required: true
+        - label: I searched existing issues for duplicates.
+          required: true
