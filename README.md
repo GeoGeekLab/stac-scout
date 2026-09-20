@@ -7,7 +7,7 @@
 `intent → task semantics → catalog federation → live item evidence → asset plan → manifest`
 
 [![CI](https://github.com/GeoGeekLab/stac-scout/actions/workflows/ci.yml/badge.svg)](https://github.com/GeoGeekLab/stac-scout/actions/workflows/ci.yml)
-[![Python](https://img.shields.io/badge/Python-3.12%20%7C%203.13-3776AB?style=flat-square&logo=python&logoColor=white)](.github/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/Python-3.12%20%7C%203.13%20%7C%203.14-3776AB?style=flat-square&logo=python&logoColor=white)](.github/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-2ea44f?style=flat-square)](LICENSE)
 [![STAC](https://img.shields.io/badge/STAC-evidence--first-111111?style=flat-square)](https://stacspec.org/)
 
@@ -129,16 +129,49 @@ confidence ≠ proof
 ## Install
 
 ```bash
-python -m pip install -e ".[dev]"
+python -m pip install stac-scout
 ```
 
-Python 3.12 or newer is required.
+Python 3.12 or newer is required. Python 3.12, 3.13, and 3.14 are tested in CI.
 
 For Planetary Computer access recipes:
 
 ```bash
-python -m pip install -e ".[planetary-computer]"
+python -m pip install "stac-scout[planetary-computer]"
 ```
+
+## 60-second first success
+
+This first check is deterministic and does not call a remote catalog:
+
+```bash
+cat > request.json <<'JSON'
+{
+  "task": "assess wildfire impact",
+  "place": "Lahaina, Maui",
+  "datetime": {
+    "start": "2023-08-09T00:00:00Z",
+    "end": "2023-08-20T23:59:59Z"
+  }
+}
+JSON
+
+stac-scout advise request.json --task wildfire_impact
+```
+
+The important part of the output is the decision contract, not prose:
+
+```json
+{
+  "data_type": "optical",
+  "required_measurements": ["nir", "swir22"],
+  "follow_up_requirements": ["comparison_windows"]
+}
+```
+
+Scout derives the optical/NIR/SWIR2 requirement but refuses to invent the missing comparison
+window. For a live Item-to-manifest walkthrough, see
+[`examples/wildfire-impact/`](examples/wildfire-impact/).
 
 ## Geo Task Intelligence
 
@@ -501,8 +534,11 @@ stac-scout/
 │   ├── cases/
 │   ├── federation_cases/
 │   ├── task_cases/
+│   ├── regression_matrix.json
 │   ├── runner.py
 │   └── live.py
+├── examples/
+│   └── wildfire-impact/
 ├── docs/
 │   ├── ARCHITECTURE.md
 │   └── TASK_RULES.md
@@ -519,14 +555,14 @@ The deterministic evaluation corpus checks contracts that affect dataset decisio
 python evals/runner.py
 ```
 
-It covers:
+It covers request invariants, modality mismatches, cloud PASS/FAIL/UNKNOWN, required versus
+preferred measurements, DOI identity strength, multiple extents, antimeridian/polar AOIs,
+empty and >100 Item behavior, provider timeout/429/partial failure, categorical resampling,
+missing `file:size`, volume budgets, task/user conflicts, malformed provider metadata,
+cross-provider identity, task derivation, temporal strategy, and follow-up requirements.
 
-- request invariants;
-- cross-provider identity;
-- task-derived measurements;
-- task modality;
-- temporal strategy;
-- follow-up requirements.
+`evals/regression_matrix.json` binds the hardening acceptance scenarios to concrete pytest node
+IDs, so removing a required regression causes the eval runner to fail.
 
 Remote providers are intentionally kept out of ordinary CI.
 
@@ -548,7 +584,10 @@ remote catalog state
 
 ## Development
 
+Contributor installs are editable; normal users should use the PyPI command above.
+
 ```bash
+python -m pip install -e ".[dev]"
 ruff check .
 ruff format --check .
 mypy
@@ -557,7 +596,7 @@ python evals/runner.py
 python -m build
 ```
 
-CI runs on Python 3.12 and 3.13.
+CI runs on Python 3.12, 3.13, and 3.14. Python 3.15 prereleases are exercised as a non-blocking compatibility signal before the final 3.15 release.
 
 Coverage must stay at or above 90%.
 
