@@ -65,16 +65,26 @@ def build_manifest(
     if request.geometry is None:
         raise ValueError("manifest requires resolved request geometry")
 
+    observation = probe.search
+    retained_count = len(probe.items)
+    if observation.items_retained != retained_count:
+        observation = observation.model_copy(
+            update={
+                "items_observed": max(observation.items_observed, retained_count),
+                "items_retained": retained_count,
+            }
+        )
+
     query = SearchQuery(
         collections=(collection_id,),
         intersects=request.geometry,
         datetime=f"{request.datetime.start.isoformat()}/{request.datetime.end.isoformat()}",
-        max_items=probe.search.max_items,
+        max_items=observation.max_items,
     )
     warnings = list(probe.warnings)
     warnings.extend(access_plan.notes)
     warnings.extend(extra_warnings)
-    if probe.search.completeness is SearchCompleteness.UNKNOWN:
+    if observation.completeness is SearchCompleteness.UNKNOWN:
         warnings.append("Item Search completeness was not recorded")
 
     return Manifest(
@@ -96,7 +106,7 @@ def build_manifest(
         ),
         query=query,
         query_fingerprint=canonical_fingerprint(query),
-        observation=probe.search,
+        observation=observation,
         item_ids=tuple(item.item_id for item in probe.items),
         item_evidence=probe.items,
         access_plan=access_plan,
