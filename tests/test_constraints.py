@@ -245,9 +245,7 @@ def test_item_constraint_summary_covers_fail_and_empty(
     scout_request: ScoutRequest,
 ) -> None:
     request = scout_request.model_copy(update={"max_cloud_cover": 20})
-    failing_checks = [
-        evaluate_item_constraints({"properties": {"eo:cloud_cover": 80}}, request)
-    ]
+    failing_checks = [evaluate_item_constraints({"properties": {"eo:cloud_cover": 80}}, request)]
 
     failing = summarize_item_constraints(failing_checks, request)
     empty = summarize_item_constraints([], request)
