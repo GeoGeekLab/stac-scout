@@ -7,7 +7,6 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 from .dataset import ConstraintCheck
-from .provider import AssetSigning
 from .request import ScoutRequest
 
 
@@ -76,19 +75,3 @@ class DecisionReport(BaseModel):
     access_plan: AccessPlan | None = None
     generated_at: datetime
 
-
-class Manifest(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True)
-
-    scout_version: str
-    generated_at: datetime
-    request: ScoutRequest
-    catalog_url: str
-    collection_id: str
-    provider_key: str | None = None
-    asset_signing: AssetSigning = AssetSigning.NONE
-    query: dict[str, Any]
-    item_ids: tuple[str, ...] = ()
-    asset_keys: tuple[str, ...] = ()
-    assumptions: tuple[str, ...] = ()
-    warnings: tuple[str, ...] = ()
