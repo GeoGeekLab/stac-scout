@@ -1,13 +1,19 @@
 from __future__ import annotations
 
+from math import inf, nan
 from threading import Event
 from typing import Any
 
 import pytest
 
-from stac_scout.catalogs import ProviderNetworkError, ProviderRateLimitError
+from stac_scout.catalogs import (
+    ProviderNetworkError,
+    ProviderNetworkPolicy,
+    ProviderRateLimitError,
+)
 from stac_scout.federation import FederatedScout
 from stac_scout.models import ScoutRequest
+from stac_scout.registry import ProviderRegistry
 
 
 class Adapter:
@@ -97,9 +103,7 @@ def test_federation_groups_exact_duplicates_and_keeps_typed_provider_failures(
         "alpha",
         "beta",
     }
-    assert result.failures == (
-        result.failures[0],
-    )
+    assert len(result.failures) == 1
     assert result.failures[0].provider_key == "limited"
     assert result.failures[0].error_type == "ProviderRateLimitError"
     assert result.failures[0].status_code == 429
@@ -165,8 +169,12 @@ def test_federation_respects_global_limit(scout_request: ScoutRequest) -> None:
 @pytest.mark.parametrize(
     ("kwargs", "message"),
     [
+        ({"per_provider_limit": 0}, "per_provider_limit"),
+        ({"limit": -1}, "limit"),
         ({"max_workers": 0}, "max_workers"),
         ({"overall_timeout_s": 0}, "overall_timeout_s"),
+        ({"overall_timeout_s": inf}, "overall_timeout_s"),
+        ({"overall_timeout_s": nan}, "overall_timeout_s"),
     ],
 )
 def test_federation_rejects_invalid_execution_limits(
@@ -201,3 +209,23 @@ def test_provider_network_error_is_a_provider_failure(
     assert result.failures[0].error_type == "ProviderNetworkError"
     assert result.failures[0].status_code == 503
     assert result.failures[0].retryable is True
+
+
+def test_from_registry_applies_one_network_policy_to_all_adapters() -> None:
+    policy = ProviderNetworkPolicy(
+        connect_timeout_s=1.5,
+        read_timeout_s=4.0,
+        max_retries=1,
+    )
+
+    scout = FederatedScout.from_registry(
+        ProviderRegistry.builtin(),
+        ["earth-search", "planetary-computer"],
+        network_policy=policy,
+    )
+
+    assert set(scout.adapters) == {"earth-search", "planetary-computer"}
+    assert all(
+        getattr(adapter, "network_policy", None) is policy
+        for adapter in scout.adapters.values()
+    )
