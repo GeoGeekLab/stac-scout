@@ -83,12 +83,14 @@ def test_recipe_uses_explicit_target_resolution_only(scout_request: ScoutRequest
     request = scout_request.model_copy(
         update={
             "max_source_resolution_m": 30,
+            "target_crs": "EPSG:3857",
             "target_resolution_m": 20,
         }
     )
 
     recipe = odc_stac_recipe(_manifest(request))
 
+    assert "crs='EPSG:3857'" in recipe
     assert "resolution=20" in recipe
     assert "resolution=30" not in recipe
 
