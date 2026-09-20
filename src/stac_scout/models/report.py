@@ -6,6 +6,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from .dataset import ConstraintCheck
 from .provider import AssetSigning
 from .request import ScoutRequest
 
@@ -35,6 +36,7 @@ class AccessPlan(BaseModel):
     output_crs: str | None = None
     output_resolution: float | None = Field(default=None, gt=0)
     resampling: dict[str, str] = Field(default_factory=dict)
+    constraints: tuple[ConstraintCheck, ...] = ()
     notes: tuple[str, ...] = ()
 
 
