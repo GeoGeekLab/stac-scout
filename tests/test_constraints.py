@@ -321,3 +321,21 @@ def test_plan_constraints_preserve_unknown_selected_asset_gsd(
     assert by_name["asset_selection"].status is ConstraintStatus.PASS
     assert by_name["source_resolution_m"].status is ConstraintStatus.UNKNOWN
     assert "not fully declared" in (by_name["source_resolution_m"].reason or "")
+
+
+def test_constraints_reject_sar_for_explicit_optical_request(
+    scout_request: ScoutRequest,
+) -> None:
+    request = scout_request.model_copy(update={"data_type": DataType.OPTICAL})
+    card = DatasetCard(
+        catalog_url="https://example.test/stac",
+        collection_id="sar-only",
+        data_type=DataType.SAR,
+        spatial_resolution_m=10,
+        assets=_optical_assets(),
+    )
+
+    checks = evaluate_constraints(card, request)
+
+    assert checks[0].name == "data_type"
+    assert checks[0].status is ConstraintStatus.FAIL
