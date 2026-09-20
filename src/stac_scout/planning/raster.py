@@ -183,7 +183,7 @@ def build_access_plan(
     if ambiguous:
         ambiguous_names = ", ".join(ambiguous)
         notes.append(
-            f"ambiguous asset selection; no lexicographic fallback used for: "
+            "ambiguous asset selection; no lexicographic fallback used for: "
             f"{ambiguous_names}"
         )
 
