@@ -7,6 +7,7 @@ import pytest
 import typer
 from typer.testing import CliRunner
 
+from stac_scout import __version__
 from stac_scout.cli import _resolve_adapter, app
 
 runner = CliRunner()
@@ -34,7 +35,7 @@ def test_version_command() -> None:
     result = runner.invoke(app, ["version"])
 
     assert result.exit_code == 0
-    assert "0.4.0" in result.output
+    assert __version__ in result.output
 
 
 def test_validate_request(tmp_path: Path) -> None:

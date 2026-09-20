@@ -1,0 +1,120 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  validate-and-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+          cache: pip
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -e ".[dev]"
+      - name: Verify tag matches package version
+        run: |
+          python - <<'PY'
+          import os
+          import pathlib
+          import tomllib
+
+          version = tomllib.loads(pathlib.Path("pyproject.toml").read_text())["project"]["version"]
+          tag = os.environ["GITHUB_REF_NAME"]
+          if tag != f"v{version}":
+              raise SystemExit(f"tag {tag!r} does not match package version {version!r}")
+          PY
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: mypy
+      - run: pytest --cov=stac_scout --cov-report=term-missing
+      - run: python evals/runner.py
+      - run: python -m build
+      - name: Verify built wheel
+        run: |
+          python -m pip install --force-reinstall --no-deps dist/*.whl
+          python - <<'PY'
+          import pathlib
+          import tomllib
+          import stac_scout
+
+          expected = tomllib.loads(pathlib.Path("pyproject.toml").read_text())["project"]["version"]
+          assert stac_scout.__version__ == expected
+          PY
+      - name: Verify packaged registry data
+        run: |
+          python - <<'PY'
+          import glob
+          import zipfile
+
+          wheel = glob.glob("dist/*.whl")[0]
+          with zipfile.ZipFile(wheel) as archive:
+              names = set(archive.namelist())
+              assert "stac_scout/data/providers.toml" in names
+              assert "stac_scout/data/tasks.toml" in names
+          PY
+      - name: Record artifact checksums
+        run: sha256sum dist/* > SHA256SUMS
+      - name: Attest release artifacts
+        uses: actions/attest@v4
+        with:
+          subject-path: "dist/*"
+      - name: Upload immutable release artifact set
+        uses: actions/upload-artifact@v7
+        with:
+          name: python-package
+          path: |
+            dist/*
+            SHA256SUMS
+          if-no-files-found: error
+
+  pypi-publish:
+    needs: validate-and-build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/stac-scout
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: python-package
+          path: artifact
+      - name: Publish exact distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: artifact/dist/
+
+  github-release:
+    needs: [validate-and-build, pypi-publish]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: python-package
+          path: artifact
+      - name: Attach the same artifacts to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            artifact/dist/* artifact/SHA256SUMS \
+            --repo "$GITHUB_REPOSITORY" \
+            --verify-tag \
+            --generate-notes \
+            --title "$GITHUB_REF_NAME"
