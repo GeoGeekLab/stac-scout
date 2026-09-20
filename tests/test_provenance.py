@@ -265,7 +265,7 @@ def test_unknown_future_manifest_version_is_rejected(
     path = tmp_path / "future.manifest.json"
     path.write_text(json.dumps(payload), encoding="utf-8")
 
-    with pytest.raises(UnsupportedManifestVersionError, match="2.0"):
+    with pytest.raises(UnsupportedManifestVersionError, match=r"2\.0"):
         read_manifest(path)
 
 
