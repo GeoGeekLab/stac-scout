@@ -56,11 +56,31 @@ class ScoutRequest(BaseModel):
     datetime: TimeRange
     data_type: DataType = DataType.ANY
     required_measurements: tuple[str, ...] = ()
-    max_spatial_resolution_m: float | None = Field(default=None, gt=0)
+    max_source_resolution_m: float | None = Field(default=None, gt=0)
+    target_resolution_m: float | None = Field(default=None, gt=0)
     max_cloud_cover: float | None = Field(default=None, ge=0, le=100)
     access: AccessPolicy = AccessPolicy.ANY
     max_data_volume_bytes: int | None = Field(default=None, gt=0)
     preferences: dict[str, Any] = Field(default_factory=dict)
+
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_legacy_resolution_field(cls, value: Any) -> Any:
+        if not isinstance(value, dict) or "max_spatial_resolution_m" not in value:
+            return value
+        if "max_source_resolution_m" in value:
+            raise ValueError(
+                "use only max_source_resolution_m; do not also provide "
+                "legacy max_spatial_resolution_m"
+            )
+        migrated = dict(value)
+        migrated["max_source_resolution_m"] = migrated.pop("max_spatial_resolution_m")
+        return migrated
+
+    @property
+    def max_spatial_resolution_m(self) -> float | None:
+        """Backward-compatible read alias for the source-resolution constraint."""
+        return self.max_source_resolution_m
 
     @field_validator("geometry")
     @classmethod
