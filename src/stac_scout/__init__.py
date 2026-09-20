@@ -1,3 +1,8 @@
 from __future__ import annotations
 
-__version__ = "0.4.0"
+from importlib.metadata import PackageNotFoundError, version
+
+try:
+    __version__ = version("stac-scout")
+except PackageNotFoundError:
+    __version__ = "0+unknown"
