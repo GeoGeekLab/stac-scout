@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 import pytest
+from pydantic import ValidationError
 
 from stac_scout.models import GeoTask, IntentDraft, TimeRange, UnresolvedIntentError
 from stac_scout.reasoning import IntentParser, intent_instructions
@@ -73,3 +74,37 @@ def test_intent_parser_is_model_agnostic() -> None:
     assert extractor.instructions == intent_instructions()
     assert "Do not invent coordinates" in extractor.instructions
     assert "Do not derive spectral measurements" in extractor.instructions
+
+
+def test_intent_draft_migrates_legacy_resolution_and_target_grid() -> None:
+    draft = IntentDraft.model_validate(
+        {
+            "task": "vegetation analysis",
+            "place": "Singapore",
+            "datetime": {
+                "start": "2026-06-01T00:00:00Z",
+                "end": "2026-06-30T00:00:00Z",
+            },
+            "max_spatial_resolution_m": 30,
+            "target_crs": "EPSG:3857",
+            "target_resolution_m": 20,
+        }
+    )
+
+    request = draft.to_request()
+
+    assert draft.max_source_resolution_m == 30
+    assert request.max_source_resolution_m == 30
+    assert request.target_crs == "EPSG:3857"
+    assert request.target_resolution_m == 20
+
+
+def test_intent_draft_rejects_conflicting_resolution_fields() -> None:
+    with pytest.raises(ValidationError, match="use only max_source_resolution_m"):
+        IntentDraft.model_validate(
+            {
+                "task": "vegetation analysis",
+                "max_source_resolution_m": 10,
+                "max_spatial_resolution_m": 30,
+            }
+        )
