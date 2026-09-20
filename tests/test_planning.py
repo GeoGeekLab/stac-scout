@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import pytest
+
 from stac_scout.models import (
     AvailabilityProbe,
     ConstraintStatus,
+    DataType,
     ItemEvidence,
     ScoutRequest,
     VerificationStatus,
@@ -307,3 +310,158 @@ def test_build_access_plan_uses_classification_metadata_for_resampling() -> None
 
 def test_estimate_asset_bytes_returns_none_without_sizes(aoi: dict[str, object]) -> None:
     assert estimate_asset_bytes([{"id": "x", "assets": {"red": {}}}], ("red",)) is None
+
+
+def test_build_access_plan_rejects_legacy_output_crs_argument(
+    scout_request: ScoutRequest,
+    aoi: dict[str, object],
+) -> None:
+    with pytest.raises(ValueError, match="set target_crs"):
+        build_access_plan(
+            scout_request,
+            _items(aoi),
+            _probe(),
+            output_crs="EPSG:3857",
+        )
+
+
+def test_build_access_plan_rejects_conflicting_output_crs_argument(
+    scout_request: ScoutRequest,
+    aoi: dict[str, object],
+) -> None:
+    request = scout_request.model_copy(update={"target_crs": "EPSG:3857"})
+
+    with pytest.raises(ValueError, match="conflicts"):
+        build_access_plan(
+            request,
+            _items(aoi),
+            _probe(),
+            output_crs="EPSG:32648",
+        )
+
+
+def test_build_access_plan_uses_quality_role_for_nearest_resampling(
+    scout_request: ScoutRequest,
+) -> None:
+    request = scout_request.model_copy(
+        update={
+            "required_measurements": ("mystery",),
+            "max_source_resolution_m": None,
+        }
+    )
+    items = [
+        {
+            "id": "scene-1",
+            "assets": {
+                "mystery": {
+                    "roles": ["quality"],
+                }
+            },
+        }
+    ]
+
+    plan, missing = build_access_plan(request, items, _probe())
+
+    assert missing == ()
+    assert plan.resampling == {"mystery": "nearest"}
+    assert plan.asset_choices[0].resampling_basis == "selected asset has mask/quality role"
+
+
+def test_build_access_plan_uses_data_type_resampling_semantics(
+    scout_request: ScoutRequest,
+) -> None:
+    items = [
+        {
+            "id": "scene-1",
+            "assets": {
+                "classes": {"roles": ["data"]},
+                "dem": {"roles": ["data"]},
+            },
+        }
+    ]
+    land_cover = scout_request.model_copy(
+        update={
+            "data_type": DataType.LAND_COVER,
+            "required_measurements": ("classes",),
+            "max_source_resolution_m": None,
+        }
+    )
+    elevation = scout_request.model_copy(
+        update={
+            "data_type": DataType.ELEVATION,
+            "required_measurements": ("dem",),
+            "max_source_resolution_m": None,
+        }
+    )
+
+    land_plan, _ = build_access_plan(land_cover, items, _probe())
+    elevation_plan, _ = build_access_plan(elevation, items, _probe())
+
+    assert land_plan.resampling == {"classes": "nearest"}
+    assert elevation_plan.resampling == {"dem": "bilinear"}
+
+
+def test_build_access_plan_reports_unknown_resampling_semantics(
+    scout_request: ScoutRequest,
+) -> None:
+    request = scout_request.model_copy(
+        update={
+            "required_measurements": ("mystery",),
+            "max_source_resolution_m": None,
+        }
+    )
+    items = [
+        {
+            "id": "scene-1",
+            "assets": {
+                "mystery": {"roles": ["data"]},
+            },
+        }
+    ]
+
+    plan, missing = build_access_plan(request, items, _probe())
+
+    assert missing == ()
+    assert plan.resampling == {}
+    assert plan.asset_choices[0].resampling is None
+    assert any("resampling semantics are unknown" in note for note in plan.notes)
+
+
+def test_build_access_plan_reports_incomplete_asset_coverage(
+    scout_request: ScoutRequest,
+) -> None:
+    request = scout_request.model_copy(
+        update={
+            "required_measurements": ("red",),
+            "max_source_resolution_m": None,
+        }
+    )
+    items = [
+        {
+            "id": "scene-1",
+            "assets": {
+                "red": {
+                    "roles": ["data"],
+                    "file:size": 100,
+                }
+            },
+        },
+        {
+            "id": "scene-2",
+            "assets": {},
+        },
+    ]
+    probe = AvailabilityProbe(
+        status=VerificationStatus.VERIFIED_AVAILABLE,
+        items_checked=2,
+        items=(
+            ItemEvidence(item_id="scene-1", item_fraction_read=1.0),
+            ItemEvidence(item_id="scene-2", item_fraction_read=1.0),
+        ),
+    )
+
+    plan, missing = build_access_plan(request, items, probe)
+
+    assert missing == ()
+    assert _constraint(plan, "asset_selection").status is ConstraintStatus.FAIL
+    assert any("not present on every inspected Item" in note for note in plan.notes)
