@@ -82,7 +82,8 @@ def probe_items(
         items_checked=len(evidence),
         max_coverage_ratio=max_coverage,
         items=tuple(evidence),
-        search=search or SearchObservation(
+        search=search
+        or SearchObservation(
             items_observed=len(evidence),
             items_retained=len(evidence),
         ),
