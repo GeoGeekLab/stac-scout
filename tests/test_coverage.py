@@ -133,7 +133,7 @@ def test_coverage_rejects_invalid_or_non_areal_geometry(
     aoi: dict[str, object],
     invalid: dict[str, object],
 ) -> None:
-    with pytest.raises(ValueError, match="geometry|Polygon|area"):
+    with pytest.raises(ValueError, match=r"geometry|Polygon|area"):
         coverage_metrics(aoi, invalid)
 
 
