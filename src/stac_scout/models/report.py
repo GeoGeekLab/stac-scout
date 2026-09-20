@@ -76,16 +76,21 @@ class SearchObservation(BaseModel):
     def validate_counts(self) -> SearchObservation:
         if self.accepted_items > self.returned_items:
             raise ValueError("accepted_items must not exceed returned_items")
-        if self.completeness is SearchCompleteness.COMPLETE and self.max_items is not None:
-            if self.returned_items >= self.max_items:
-                raise ValueError(
-                    "complete search must return fewer Items than the recorded max_items"
-                )
-        if self.completeness is SearchCompleteness.LIMIT_REACHED:
-            if self.max_items is None or self.returned_items != self.max_items:
-                raise ValueError(
-                    "limit_reached search must return exactly the recorded max_items"
-                )
+        if (
+            self.completeness is SearchCompleteness.COMPLETE
+            and self.max_items is not None
+            and self.returned_items >= self.max_items
+        ):
+            raise ValueError(
+                "complete search must return fewer Items than the recorded max_items"
+            )
+        if (
+            self.completeness is SearchCompleteness.LIMIT_REACHED
+            and (self.max_items is None or self.returned_items != self.max_items)
+        ):
+            raise ValueError(
+                "limit_reached search must return exactly the recorded max_items"
+            )
         return self
 
 
