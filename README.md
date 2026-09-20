@@ -376,14 +376,23 @@ stac-scout plan request.json \
 Planning can produce:
 
 ```text
-measurement → asset
-resampling strategy
+measurement → asset + selection evidence
+resampling strategy + evidence
 windowed-read estimate
-output resolution
+explicit target output resolution
 provider signing requirements
 warnings
 odc-stac recipe
 ```
+
+`max_source_resolution_m` answers “is this source data fine enough?” while
+`target_resolution_m` answers “what output grid should I request?”. Scout never reuses the
+source threshold as an output resampling instruction. The legacy input name
+`max_spatial_resolution_m` is accepted as a source-resolution alias for compatibility.
+
+If multiple assets remain equally supported after semantic, role, coverage, media-type, and GSD
+evidence, Scout reports the selection as ambiguous instead of choosing the alphabetically first
+key. Unknown resampling semantics likewise remain unresolved rather than defaulting to bilinear.
 
 When `file:size` exists, Scout estimates transfer volume from the AOI/item intersection fraction.
 
