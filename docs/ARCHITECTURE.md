@@ -82,7 +82,7 @@ Preferences are not hard constraints and do not override a hard-constraint failu
 
 Collection extents are not proof of availability. Item search is required before Scout reports data as available.
 
-AOI coverage uses WGS84 ellipsoidal area and records both AOI coverage and the fraction of each item intersected by the AOI.
+AOI coverage does not intersect raw longitude/latitude coordinates directly. Polygon and MultiPolygon rings are normalized into a continuous longitude domain centered on the AOI, long edges are densified, and area ratios are measured in an AOI-centered WGS84 Lambert Azimuthal Equal Area projection. This keeps antimeridian-crossing and high-latitude coverage topology explicit while recording both AOI coverage and the fraction of each Item intersected by the AOI.
 
 ## Federation and identity
 
