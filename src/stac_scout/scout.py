@@ -56,9 +56,7 @@ def _normalize_provider_collection(raw: dict[str, Any], catalog_url: str) -> Dat
 def _validate_provider_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     for index, item in enumerate(items):
         if not isinstance(item, dict):
-            raise ProviderMetadataError(
-                f"provider Item metadata at index {index} is not an object"
-            )
+            raise ProviderMetadataError(f"provider Item metadata at index {index} is not an object")
     return items
 
 
