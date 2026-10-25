@@ -34,6 +34,9 @@ planning raster reads, and replaying the result later.
 **Find it. Verify it. Plan it. Replay it.**
 
 </div>
+<!-- GeoGeekLab VIS: existing mascot / canonical illustration retained -->
+<p align="center"><sub><a href="https://github.com/GeoGeekLab/geogeeklab-visual-identity/blob/main/identity-sheets/stac-scout.md">Scout identity system ↗</a></sub></p>
+
 
 ## What is STAC Scout?
 
