@@ -29,7 +29,7 @@ planning raster reads, and replaying the result later.
 
 <br>
 
-<img src="docs/assets/mascot/scout-hero.webp" width="240" alt="Scout, the STAC Scout mascot">
+<img src="https://raw.githubusercontent.com/GeoGeekLab/geogeeklab-visual-identity/main/readme-artwork/v3/stac-scout/readme-artwork.webp" alt="Scout examining satellite imagery and geospatial datasets" width="390">
 
 **Find it. Verify it. Plan it. Replay it.**
 
@@ -373,8 +373,6 @@ stac-scout advise-intent intent.json
 The rest of the pipeline is the same CLI and model layer used by hand-written requests.
 
 ## Development
-
-<img src="docs/assets/mascot/scout-terminal.webp" width="300" align="right" alt="Scout working at a geospatial developer terminal">
 
 Scout is happiest when the tests are boring.
 
